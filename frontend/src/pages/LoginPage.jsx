@@ -74,7 +74,7 @@ export default function LoginPage() {
               <p className="mt-4 max-w-sm animate-fade-up text-sm leading-6 text-white/45 [animation-delay:240ms]">
                 A focused workspace for <HighlightPill>recording sales</HighlightPill>,{" "}
                 <HighlightPill>tracking payments</HighlightPill> and keeping{" "}
-                <HighlightPill>customers</HighlightPill> informed.
+                <HighlightPill>customers informed.</HighlightPill>
               </p>
 
               {/* Live ledger ticker */}
@@ -99,7 +99,6 @@ export default function LoginPage() {
             <span className="relative font-mono text-[10px] text-white/25">Fuelo v1.0.0</span>
           </div>
 
-          {/* Right panel */}
           {/* Right panel */}
           <div className="relative overflow-hidden bg-white p-7 sm:p-10">
             {/* Faint dot texture */}
