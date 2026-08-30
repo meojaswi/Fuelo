@@ -96,7 +96,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <span className="relative font-mono text-[10px] text-white/25">Fuelo</span>
+            <span className="relative font-mono text-[10px] text-white/25">Fuelo v1.0.0</span>
           </div>
 
           {/* Right panel */}
