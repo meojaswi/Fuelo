@@ -1,1 +1,26 @@
-import{Loader2}from"lucide-react";export default function Button({variant="primary",loading=false,className="",children,...p}){const s={primary:"bg-fuelo-ink text-white hover:bg-fuelo-slate",secondary:"border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",coral:"bg-fuelo-coral text-white hover:brightness-95",ghost:"text-slate-600 hover:bg-slate-100",danger:"bg-red-600 text-white hover:bg-red-700"};return <button className={`inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${s[variant]} ${className}`} disabled={loading||p.disabled}{...p}>{loading&&<Loader2 size={15} className="animate-spin"/>}{children}</button>}
+import { Loader2 } from "lucide-react";
+export default function Button({
+  variant = "primary",
+  loading = false,
+  className = "",
+  children,
+  ...p
+}) {
+  const s = {
+    primary: "bg-fuelo-ink text-white hover:bg-fuelo-slate",
+    secondary: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+    coral: "bg-fuelo-coral text-white hover:brightness-95",
+    ghost: "text-slate-600 hover:bg-slate-100",
+    danger: "bg-red-600 text-white hover:bg-red-700",
+  };
+  return (
+    <button
+      className={`inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${s[variant]} ${className}`}
+      disabled={loading || p.disabled}
+      {...p}
+    >
+      {loading && <Loader2 size={15} className="animate-spin" />}
+      {children}
+    </button>
+  );
+}

@@ -17,11 +17,7 @@ function buildTransactionReceipt(tx) {
 
 function buildEndOfDaySummary({ workspaceName, date, lines, totalAmount }) {
   const body = lines.map((l) => `${l.itemType}: ${l.quantity} ${l.unit}`).join("\n");
-  return (
-    `${workspaceName} — Daily Summary (${date})\n` +
-    `${body}\n` +
-    `Total: ₹${totalAmount}`
-  );
+  return `${workspaceName} — Daily Summary (${date})\n` + `${body}\n` + `Total: ₹${totalAmount}`;
 }
 
 module.exports = { buildTransactionReceipt, buildEndOfDaySummary };

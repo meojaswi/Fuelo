@@ -18,9 +18,7 @@ export default function SharedReceiptPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-4 py-10">
       {s.loading ? (
-        <div className="grid place-items-center text-sm text-slate-400">
-          Opening receipt…
-        </div>
+        <div className="grid place-items-center text-sm text-slate-400">Opening receipt…</div>
       ) : s.transaction ? (
         <ReceiptView transaction={s.transaction} />
       ) : s.expired ? (

@@ -1,1 +1,14 @@
-import PillSelector from"../shared/PillSelector";export default function ItemTypeFilter({value,onChange}){return <div><p className="mb-2 text-xs font-semibold text-slate-600">Item</p><PillSelector multiple options={["Diesel","Petrol","CNG"]} value={value||[]} onChange={onChange}/></div>}
+import PillSelector from "../shared/PillSelector";
+export default function ItemTypeFilter({ value, onChange }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold text-slate-600">Item</p>
+      <PillSelector
+        multiple
+        options={["Diesel", "Petrol", "CNG"]}
+        value={value || []}
+        onChange={onChange}
+      />
+    </div>
+  );
+}

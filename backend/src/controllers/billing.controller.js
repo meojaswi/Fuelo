@@ -2,7 +2,11 @@ const crypto = require("crypto");
 const env = require("../config/env");
 const logger = require("../utils/logger");
 
-const { SubscriptionPlan, WorkspaceSubscription, LinkedRevenueAccount } = require("../models/subscription.model");
+const {
+  SubscriptionPlan,
+  WorkspaceSubscription,
+  LinkedRevenueAccount,
+} = require("../models/subscription.model");
 const WebhookEvent = require("../models/webhookEvent.model");
 const razorpayService = require("../services/razorpay.service");
 
@@ -42,7 +46,9 @@ async function handleWebhook(req, res) {
   }
 
   const event = req.body;
-  const eventId = req.headers["x-razorpay-event-id"] || event.event + ":" + (event.payload?.payment?.entity?.id || "");
+  const eventId =
+    req.headers["x-razorpay-event-id"] ||
+    event.event + ":" + (event.payload?.payment?.entity?.id || "");
 
   try {
     await WebhookEvent.create({ provider: "razorpay", eventId });
@@ -79,7 +85,11 @@ async function handleWebhook(req, res) {
             sharePercent: linkedAccount.sharePercent,
           });
         } catch (err) {
-          logger.error({ msg: "Revenue split transfer failed", err: err.message, paymentId: payment.id });
+          logger.error({
+            msg: "Revenue split transfer failed",
+            err: err.message,
+            paymentId: payment.id,
+          });
           // Don't fail the webhook ack over this — log and handle
           // reconciliation separately rather than causing Razorpay to retry
           // the whole event (which would re-trigger the subscription update).

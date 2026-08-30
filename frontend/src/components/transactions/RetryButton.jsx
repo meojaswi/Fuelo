@@ -1,1 +1,8 @@
-import Button from"../shared/Button";export default function RetryButton({visible,onRetry,loading}){return visible?<Button variant="secondary" loading={loading} onClick={onRetry}>Retry message</Button>:null}
+import Button from "../shared/Button";
+export default function RetryButton({ visible, onRetry, loading }) {
+  return visible ? (
+    <Button variant="secondary" loading={loading} onClick={onRetry}>
+      Retry message
+    </Button>
+  ) : null;
+}

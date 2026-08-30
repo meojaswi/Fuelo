@@ -9,7 +9,9 @@ function nowIST() {
 /** Start and end of the IST business day containing `date` (defaults to now), returned in UTC. */
 function istDayBoundsUTC(date = new Date()) {
   const ist = new Date(date.getTime() + IST_OFFSET_MINUTES * 60 * 1000);
-  const startIST = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), 0, 0, 0));
+  const startIST = new Date(
+    Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), 0, 0, 0)
+  );
   const endIST = new Date(startIST.getTime() + 24 * 60 * 60 * 1000);
 
   return {

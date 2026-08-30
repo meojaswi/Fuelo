@@ -1,1 +1,11 @@
-import Textarea from"../shared/Textarea";export default function NotesInput({value,onChange}){return <Textarea label="Notes · optional" value={value} onChange={e=>onChange(e.target.value)} placeholder="Add context for this transaction..."/>}
+import Textarea from "../shared/Textarea";
+export default function NotesInput({ value, onChange }) {
+  return (
+    <Textarea
+      label="Notes · optional"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Add context for this transaction..."
+    />
+  );
+}

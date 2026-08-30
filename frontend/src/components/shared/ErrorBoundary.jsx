@@ -1,1 +1,19 @@
-import React from"react";export default class ErrorBoundary extends React.Component{state={hasError:false};static getDerivedStateFromError(){return{hasError:true}}render(){return this.state.hasError?<div className="grid min-h-screen place-items-center"><div className="text-center"><h1 className="font-bold">Something went wrong</h1><p className="mt-2 text-sm text-slate-500">Refresh and try again.</p></div></div>:this.props.children}}
+import React from "react";
+export default class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    return this.state.hasError ? (
+      <div className="grid min-h-screen place-items-center">
+        <div className="text-center">
+          <h1 className="font-bold">Something went wrong</h1>
+          <p className="mt-2 text-sm text-slate-500">Refresh and try again.</p>
+        </div>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}

@@ -1,1 +1,17 @@
-import Button from"./Button";export default function Pagination({page,pages,onChange}){if(pages<=1)return null;return <div className="flex items-center justify-center gap-3 py-5"><Button variant="secondary" disabled={page===1} onClick={()=>onChange(page-1)}>Previous</Button><span className="font-mono text-xs text-slate-400">{String(page).padStart(2,"0")} / {String(pages).padStart(2,"0")}</span><Button variant="secondary" disabled={page===pages} onClick={()=>onChange(page+1)}>Next</Button></div>}
+import Button from "./Button";
+export default function Pagination({ page, pages, onChange }) {
+  if (pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-3 py-5">
+      <Button variant="secondary" disabled={page === 1} onClick={() => onChange(page - 1)}>
+        Previous
+      </Button>
+      <span className="font-mono text-xs text-slate-400">
+        {String(page).padStart(2, "0")} / {String(pages).padStart(2, "0")}
+      </span>
+      <Button variant="secondary" disabled={page === pages} onClick={() => onChange(page + 1)}>
+        Next
+      </Button>
+    </div>
+  );
+}

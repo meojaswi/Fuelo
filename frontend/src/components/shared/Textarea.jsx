@@ -1,1 +1,11 @@
-export default function Textarea({label,...p}){return <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-600">{label}</span><textarea className="control min-h-24 w-full resize-y px-3.5 py-3 text-sm placeholder:text-slate-300" {...p}/></label>}
+export default function Textarea({ label, ...p }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-semibold text-slate-600">{label}</span>
+      <textarea
+        className="control min-h-24 w-full resize-y px-3.5 py-3 text-sm placeholder:text-slate-300"
+        {...p}
+      />
+    </label>
+  );
+}

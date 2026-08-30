@@ -1,2 +1,72 @@
-import{useState}from"react";import CustomerNameInput from"./CustomerNameInput";import ItemTypeSelector from"./ItemTypeSelector";import QuantityInput from"./QuantityInput";import AmountInput from"./AmountInput";import PaymentModeSelector from"./PaymentModeSelector";import UpiReferenceInput from"./UpiReferenceInput";import NotesInput from"./NotesInput";import MessagePreviewModal from"./MessagePreviewModal";import Button from"../shared/Button";import{createTransaction}from"../../api/transactions.api";
-export default function TransactionForm({onSaved}){const[f,setF]=useState({customerName:"",itemType:"Diesel",quantity:"",amount:"",paymentMode:"Cash",upiReference:"",notes:""});const[preview,setPreview]=useState(false),[saving,setSaving]=useState(false);const u=(k,v)=>setF(x=>({...x,[k]:v}));async function submit(e){e.preventDefault();setSaving(true);try{const d=await createTransaction({...f,quantity:Number(f.quantity),amount:Number(f.amount)});onSaved?.(d)}catch(e){alert(e.response?.data?.message||"Could not save transaction.")}finally{setSaving(false)}}const msg=`Hi ${f.customerName||"Customer"}, your ${f.itemType} transaction of ₹${f.amount||0} has been recorded. Payment: ${f.paymentMode}. Thank you.`;return <form onSubmit={submit} className="space-y-6"><CustomerNameInput value={f.customerName} onChange={v=>u("customerName",v)}/><ItemTypeSelector value={f.itemType} onChange={v=>u("itemType",v)}/><div className="grid gap-4 sm:grid-cols-2"><QuantityInput value={f.quantity} onChange={v=>u("quantity",v)}/><AmountInput value={f.amount} onChange={v=>u("amount",v)}/></div><PaymentModeSelector value={f.paymentMode} onChange={v=>u("paymentMode",v)}/><UpiReferenceInput visible={f.paymentMode==="UPI"} value={f.upiReference} onChange={v=>u("upiReference",v)}/><NotesInput value={f.notes} onChange={v=>u("notes",v)}/><div className="flex items-center justify-between border-t border-slate-100 pt-5"><button type="button" onClick={()=>setPreview(true)} className="text-sm font-semibold text-slate-500 hover:text-slate-900">Preview message</button><Button loading={saving} className="min-w-40">Save transaction</Button></div><MessagePreviewModal open={preview} onClose={()=>setPreview(false)} message={msg}/></form>}
+import { useState } from "react";
+import CustomerNameInput from "./CustomerNameInput";
+import ItemTypeSelector from "./ItemTypeSelector";
+import QuantityInput from "./QuantityInput";
+import AmountInput from "./AmountInput";
+import PaymentModeSelector from "./PaymentModeSelector";
+import UpiReferenceInput from "./UpiReferenceInput";
+import NotesInput from "./NotesInput";
+import MessagePreviewModal from "./MessagePreviewModal";
+import Button from "../shared/Button";
+import { createTransaction } from "../../api/transactions.api";
+export default function TransactionForm({ onSaved }) {
+  const [f, setF] = useState({
+    customerName: "",
+    itemType: "Diesel",
+    quantity: "",
+    amount: "",
+    paymentMode: "Cash",
+    upiReference: "",
+    notes: "",
+  });
+  const [preview, setPreview] = useState(false),
+    [saving, setSaving] = useState(false);
+  const u = (k, v) => setF((x) => ({ ...x, [k]: v }));
+  async function submit(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const d = await createTransaction({
+        ...f,
+        quantity: Number(f.quantity),
+        amount: Number(f.amount),
+      });
+      onSaved?.(d);
+    } catch (e) {
+      alert(e.response?.data?.message || "Could not save transaction.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  const msg = `Hi ${f.customerName || "Customer"}, your ${f.itemType} transaction of ₹${f.amount || 0} has been recorded. Payment: ${f.paymentMode}. Thank you.`;
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <CustomerNameInput value={f.customerName} onChange={(v) => u("customerName", v)} />
+      <ItemTypeSelector value={f.itemType} onChange={(v) => u("itemType", v)} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <QuantityInput value={f.quantity} onChange={(v) => u("quantity", v)} />
+        <AmountInput value={f.amount} onChange={(v) => u("amount", v)} />
+      </div>
+      <PaymentModeSelector value={f.paymentMode} onChange={(v) => u("paymentMode", v)} />
+      <UpiReferenceInput
+        visible={f.paymentMode === "UPI"}
+        value={f.upiReference}
+        onChange={(v) => u("upiReference", v)}
+      />
+      <NotesInput value={f.notes} onChange={(v) => u("notes", v)} />
+      <div className="flex items-center justify-between border-t border-slate-100 pt-5">
+        <button
+          type="button"
+          onClick={() => setPreview(true)}
+          className="text-sm font-semibold text-slate-500 hover:text-slate-900"
+        >
+          Preview message
+        </button>
+        <Button loading={saving} className="min-w-40">
+          Save transaction
+        </Button>
+      </div>
+      <MessagePreviewModal open={preview} onClose={() => setPreview(false)} message={msg} />
+    </form>
+  );
+}

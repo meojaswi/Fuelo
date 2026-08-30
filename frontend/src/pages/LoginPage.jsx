@@ -17,7 +17,9 @@ export default function LoginPage() {
       await login(phone, password);
       n("/", { replace: true });
     } catch (e) {
-      setError(e.response?.data?.error || e.response?.data?.message || e.message || "Unable to sign in.");
+      setError(
+        e.response?.data?.error || e.response?.data?.message || e.message || "Unable to sign in."
+      );
     }
   }
   return (
@@ -29,9 +31,7 @@ export default function LoginPage() {
               <div className="text-2xl font-black">
                 fuelo<span className="text-fuelo-coral">.</span>
               </div>
-              <p className="mono-label mt-2 text-white/40">
-                ledger infrastructure
-              </p>
+              <p className="mono-label mt-2 text-white/40">ledger infrastructure</p>
             </div>
             <div>
               <p className="mono-label text-fuelo-coral">Workspace ledger</p>
@@ -39,28 +39,20 @@ export default function LoginPage() {
                 Keep every transaction in motion.
               </h1>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/45">
-                A focused workspace for recording sales, tracking payments and
-                keeping customers informed.
+                A focused workspace for recording sales, tracking payments and keeping customers
+                informed.
               </p>
             </div>
-            <span className="font-mono text-[10px] text-white/25">
-              FUelo / 01
-            </span>
+            <span className="font-mono text-[10px] text-white/25">FUelo / 01</span>
           </div>
           <div className="p-7 sm:p-10">
             <div className="mb-10">
               <p className="mono-label">Welcome back</p>
               <h2 className="mt-2 text-2xl font-bold">Sign in to Fuelo.</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Continue to your workspace.
-              </p>
+              <p className="mt-2 text-sm text-slate-500">Continue to your workspace.</p>
             </div>
             <form onSubmit={submit} className="space-y-5">
-              <PhoneInput
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
+              <PhoneInput value={phone} onChange={(e) => setPhone(e.target.value)} required />
               <Input
                 label="Password"
                 type="password"
@@ -68,11 +60,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {error && (
-                <p className="rounded-[8px] bg-red-50 p-3 text-sm text-red-600">
-                  {error}
-                </p>
-              )}
+              {error && <p className="rounded-[8px] bg-red-50 p-3 text-sm text-red-600">{error}</p>}
               <Button loading={loading} className="w-full">
                 Sign in
               </Button>

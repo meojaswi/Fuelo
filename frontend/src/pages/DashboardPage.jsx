@@ -22,9 +22,7 @@ export default function DashboardPage() {
       <div className="flex items-end justify-between">
         <div>
           <p className="mono-label">Workspace overview</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight">
-            Good morning.
-          </h2>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight">Good morning.</h2>
           <p className="mt-1 text-sm text-slate-500">
             Here’s what’s happening in your ledger today.
           </p>

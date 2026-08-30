@@ -1,1 +1,14 @@
-export default function EmptyState({title="Nothing here yet",description="There is no activity to show."}){return <div className="panel border-dashed p-10 text-center"><div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">—</div><h3 className="mt-4 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500">{description}</p></div>}
+export default function EmptyState({
+  title = "Nothing here yet",
+  description = "There is no activity to show.",
+}) {
+  return (
+    <div className="panel border-dashed p-10 text-center">
+      <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
+        —
+      </div>
+      <h3 className="mt-4 font-semibold">{title}</h3>
+      <p className="mt-1 text-sm text-slate-500">{description}</p>
+    </div>
+  );
+}

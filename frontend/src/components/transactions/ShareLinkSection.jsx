@@ -1,1 +1,28 @@
-import{useState}from"react";import{generateShareLink}from"../../api/links.api";import GenerateLinkButton from"./GenerateLinkButton";import CopyLinkInput from"./CopyLinkInput";export default function ShareLinkSection({transactionId}){const[l,setL]=useState(""),[loading,setLoading]=useState(false);async function go(){setLoading(true);try{const d=await generateShareLink(transactionId);setL(d.url||d.link||"")}finally{setLoading(false)}}return <div className="panel p-5"><p className="mono-label">Customer receipt</p><h3 className="mt-1 font-bold">Share a one-time receipt</h3><p className="mt-1 text-sm text-slate-500">The link is designed to expire after use.</p><div className="mt-4 space-y-3"><GenerateLinkButton onClick={go} loading={loading}/><CopyLinkInput link={l}/></div></div>}
+import { useState } from "react";
+import { generateShareLink } from "../../api/links.api";
+import GenerateLinkButton from "./GenerateLinkButton";
+import CopyLinkInput from "./CopyLinkInput";
+export default function ShareLinkSection({ transactionId }) {
+  const [l, setL] = useState(""),
+    [loading, setLoading] = useState(false);
+  async function go() {
+    setLoading(true);
+    try {
+      const d = await generateShareLink(transactionId);
+      setL(d.url || d.link || "");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <div className="panel p-5">
+      <p className="mono-label">Customer receipt</p>
+      <h3 className="mt-1 font-bold">Share a one-time receipt</h3>
+      <p className="mt-1 text-sm text-slate-500">The link is designed to expire after use.</p>
+      <div className="mt-4 space-y-3">
+        <GenerateLinkButton onClick={go} loading={loading} />
+        <CopyLinkInput link={l} />
+      </div>
+    </div>
+  );
+}

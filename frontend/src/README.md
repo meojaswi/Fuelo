@@ -1,6 +1,7 @@
 # Fuelo polished frontend
 
 Built around the supplied Fuelo-adapted design direction:
+
 - Primary: #CC8066
 - White background
 - #191C21 dark surface
