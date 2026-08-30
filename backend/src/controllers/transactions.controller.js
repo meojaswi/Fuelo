@@ -1,5 +1,6 @@
 const Transaction = require("../models/transaction.model");
 const Dealer = require("../models/dealer.model");
+const Inventory = require("../models/inventory.model");
 const messageQueue = require("../services/messageQueue.service");
 const messageBuilder = require("../services/messageBuilder.service");
 const pdfService = require("../services/pdf.service");
@@ -16,6 +17,17 @@ async function create(req, res) {
     toPhone: tx.customerPhone,
     body: messageBuilder.buildTransactionReceipt(tx),
   });
+
+  // Auto-decrement inventory stock for this item type (best-effort,
+  // don't block the response if the item doesn't exist in inventory).
+  try {
+    await Inventory.findOneAndUpdate(
+      { workspaceId: req.workspaceId, itemType: tx.itemType },
+      { $inc: { currentStock: -tx.quantity } }
+    );
+  } catch (err) {
+    // Silently ignore — inventory tracking is optional
+  }
 
   res.status(201).json(tx);
 }
