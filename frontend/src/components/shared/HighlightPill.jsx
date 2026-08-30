@@ -1,0 +1,79 @@
+export default function HighlightPill({ children, className = "" }) {
+  return (
+    <span className={`relative inline-block ${className}`}>
+      {/* Underlay stroke — slightly offset, gives depth/texture like a second marker pass */}
+      <span
+        aria-hidden="true"
+        className="
+          absolute
+          -left-1.5
+          -right-1
+          bottom-[0.02em]
+          h-[0.85em]
+          rotate-[0.8deg]
+          bg-fuelo-coral/20
+          origin-left
+          animate-highlight-in
+          [clip-path:polygon(
+            2%_35%,
+            10%_10%,
+            25%_22%,
+            40%_2%,
+            58%_18%,
+            75%_4%,
+            92%_20%,
+            100%_10%,
+            99%_68%,
+            90%_90%,
+            74%_75%,
+            57%_98%,
+            41%_78%,
+            24%_100%,
+            9%_82%,
+            0%_60%
+          )]
+        "
+      />
+      {/* Main highlighter stroke */}
+      <span
+        aria-hidden="true"
+        className="
+          absolute
+          -left-1
+          -right-1.5
+          bottom-[0.06em]
+          h-[0.78em]
+          -rotate-[1.4deg]
+          bg-fuelo-coral/35
+          origin-left
+          animate-highlight-in
+          [animation-delay:60ms]
+          [clip-path:polygon(
+            1%_18%,
+            7%_5%,
+            19%_15%,
+            33%_3%,
+            49%_14%,
+            63%_2%,
+            79%_16%,
+            88%_6%,
+            97%_13%,
+            100%_28%,
+            99%_74%,
+            93%_88%,
+            81%_78%,
+            68%_95%,
+            53%_82%,
+            37%_98%,
+            22%_88%,
+            10%_96%,
+            2%_78%,
+            0%_60%
+          )]
+        "
+      />
+      {/* Text */}
+      <span className="relative z-10">{children}</span>
+    </span>
+  );
+}
