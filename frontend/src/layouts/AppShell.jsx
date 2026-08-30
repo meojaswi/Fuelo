@@ -27,12 +27,12 @@ export default function AppShell() {
     <div className="min-h-screen bg-white">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white md:block">
         <div className="flex h-16 items-center border-b px-6">
-          <div>
+          <Link to="/" className="block hover:opacity-80 transition">
             <div className="text-lg font-extrabold tracking-tight">
               fuelo<span className="text-fuelo-coral">.</span>
             </div>
             <div className="mono-label mt-0.5">ledger workspace</div>
-          </div>
+          </Link>
         </div>
         <div className="p-4">
           <Link to="/workspaces" className="block mb-7 rounded-[8px] border border-slate-200 bg-slate-50 p-3.5 hover:border-slate-300 transition group">
