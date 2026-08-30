@@ -11,7 +11,7 @@ const dealerSchema = new mongoose.Schema(
       enum: ["fuel", "timber", "construction", "kirana", "other"],
       required: true,
     },
-    phone: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
     passwordHash: { type: String, required: true },
     isActive: { type: Boolean, default: true },
 

@@ -10,6 +10,13 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [workspaces, setWorkspaces] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("fuelo_workspaces")) || [];
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     token ? localStorage.setItem("fuelo_token", token) : localStorage.removeItem("fuelo_token");
@@ -24,19 +31,39 @@ export function AuthProvider({ children }) {
       const u = d.user || d.client || d.dealer || null;
       setUser(u);
       if (u) localStorage.setItem("fuelo_user", JSON.stringify(u));
+      
+      if (d.workspaces) {
+        setWorkspaces(d.workspaces);
+        localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
+      }
+      
       return d;
     } finally {
       setLoading(false);
     }
   }
+
+  function updateSession(d) {
+    if (d.token) setToken(d.token);
+    if (d.dealer) {
+      setUser(d.dealer);
+      localStorage.setItem("fuelo_user", JSON.stringify(d.dealer));
+    }
+    if (d.workspaces) {
+        setWorkspaces(d.workspaces);
+        localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
+    }
+  }
   function logout() {
     setToken(null);
     setUser(null);
+    setWorkspaces([]);
     localStorage.removeItem("fuelo_user");
+    localStorage.removeItem("fuelo_workspaces");
   }
   return (
     <C.Provider
-      value={useMemo(() => ({ token, user, loading, login, logout }), [token, user, loading])}
+      value={useMemo(() => ({ token, user, workspaces, loading, login, logout, updateSession }), [token, user, workspaces, loading])}
     >
       {children}
     </C.Provider>
