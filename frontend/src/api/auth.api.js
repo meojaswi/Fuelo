@@ -19,3 +19,8 @@ export async function deleteWorkspaceRequest(workspaceId) {
   const { data } = await client.delete(`/auth/workspaces/${workspaceId}`);
   return data;
 }
+
+export async function updatePasswordRequest(payload) {
+  const { data } = await client.patch("/auth/password", payload);
+  return data;
+}

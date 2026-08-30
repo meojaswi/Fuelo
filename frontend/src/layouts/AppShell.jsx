@@ -20,6 +20,8 @@ import TransactionListPage from "../pages/TransactionListPage";
 import TransactionDetailPage from "../pages/TransactionDetailPage";
 import MessagesPage from "../pages/MessagesPage";
 import WorkspacesPage from "../pages/WorkspacesPage";
+import SettingsPage from "../pages/SettingsPage";
+
 export default function AppShell() {
   const { user, logout } = useAuth();
   const workspace = user?.workspace?.name || user?.workspaceName || "Primary workspace";
@@ -77,6 +79,7 @@ export default function AppShell() {
             <Route path="/transactions/:id" element={<TransactionDetailPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/workspaces" element={<WorkspacesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </main>

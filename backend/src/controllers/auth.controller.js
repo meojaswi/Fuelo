@@ -119,4 +119,29 @@ async function deleteWorkspace(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, switchWorkspace, createWorkspace, deleteWorkspace };
+async function updatePassword(req, res) {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Missing password fields" });
+  }
+
+  const currentDealer = await Dealer.findById(req.user.dealerId).setOptions({ skipWorkspaceGuard: true });
+  if (!currentDealer) return res.status(401).json({ error: "Unauthorized" });
+
+  const valid = await authService.verifyPassword(currentPassword, currentDealer.passwordHash);
+  if (!valid) {
+    return res.status(401).json({ error: "Incorrect current password" });
+  }
+
+  const newHash = await authService.hashPassword(newPassword);
+
+  // Update password for all workspaces tied to this phone
+  await Dealer.updateMany(
+    { phone: currentDealer.phone },
+    { $set: { passwordHash: newHash } }
+  ).setOptions({ skipWorkspaceGuard: true });
+
+  res.json({ ok: true });
+}
+
+module.exports = { login, switchWorkspace, createWorkspace, deleteWorkspace, updatePassword };

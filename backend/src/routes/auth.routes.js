@@ -10,5 +10,6 @@ router.post("/login", validateBody(loginSchema), authController.login);
 router.post("/switch", requireAuth, authController.switchWorkspace);
 router.post("/workspaces", requireAuth, authController.createWorkspace);
 router.delete("/workspaces/:workspaceId", requireAuth, authController.deleteWorkspace);
+router.patch("/password", requireAuth, authController.updatePassword);
 
 module.exports = router;

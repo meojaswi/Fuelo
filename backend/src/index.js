@@ -16,6 +16,7 @@ const customersRoutes = require("./routes/customers.routes");
 const notificationsRoutes = require("./routes/notifications.routes");
 const summaryRoutes = require("./routes/summary.routes");
 const billingRoutes = require("./routes/billing.routes");
+const dealerRoutes = require("./routes/dealer.routes");
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use("/customers", customersRoutes);
 app.use("/notifications", notificationsRoutes);
 app.use("/summary", summaryRoutes);
 app.use("/billing", billingRoutes);
+app.use("/dealer", dealerRoutes);
 
 app.use(errorHandler);
 
