@@ -1,0 +1,1 @@
+import Input from"../shared/Input";export default function UpiReferenceInput({visible,value,onChange}){return visible?<Input label="UPI reference / RRN" value={value} onChange={e=>onChange(e.target.value)} placeholder="Optional reference"/>:null}
