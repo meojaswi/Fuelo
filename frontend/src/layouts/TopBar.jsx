@@ -4,6 +4,10 @@ const map = {
   "/": "Overview",
   "/transactions": "Transactions",
   "/transactions/new": "New transaction",
+  "/members": "Members",
+  "/messages": "Messages",
+  "/workspaces": "Workspaces",
+  "/settings": "Settings",
 };
 export default function TopBar() {
   const l = useLocation(),
@@ -19,7 +23,7 @@ export default function TopBar() {
         )}
         <div>
           <p className="mono-label hidden sm:block">Workspace / Fuelo</p>
-          <h1 className="font-bold">{map[l.pathname] || "Transaction"}</h1>
+          <h1 className="font-bold">{map[l.pathname] || "Page"}</h1>
         </div>
       </div>
       <button className="relative rounded-[8px] p-2.5 hover:bg-slate-100">

@@ -19,6 +19,7 @@ import NewTransactionPage from "../pages/NewTransactionPage";
 import TransactionListPage from "../pages/TransactionListPage";
 import TransactionDetailPage from "../pages/TransactionDetailPage";
 import MessagesPage from "../pages/MessagesPage";
+import MembersPage from "../pages/MembersPage";
 import WorkspacesPage from "../pages/WorkspacesPage";
 import SettingsPage from "../pages/SettingsPage";
 
@@ -37,10 +38,15 @@ export default function AppShell() {
           </Link>
         </div>
         <div className="p-4">
-          <Link to="/workspaces" className="block mb-7 rounded-[8px] border border-slate-200 bg-slate-50 p-3.5 hover:border-slate-300 transition group">
+          <Link
+            to="/workspaces"
+            className="block mb-7 rounded-[8px] border border-slate-200 bg-slate-50 p-3.5 hover:border-slate-300 transition group"
+          >
             <div className="flex items-center justify-between">
               <p className="mono-label">Current workspace</p>
-              <span className="text-[10px] text-slate-400 group-hover:text-fuelo-ink font-semibold uppercase tracking-wider">Change</span>
+              <span className="text-[10px] text-slate-400 group-hover:text-fuelo-ink font-semibold uppercase tracking-wider">
+                Change
+              </span>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-[8px] bg-fuelo-ink text-xs font-bold text-white">
@@ -77,6 +83,7 @@ export default function AppShell() {
             <Route path="/transactions/new" element={<NewTransactionPage />} />
             <Route path="/transactions" element={<TransactionListPage />} />
             <Route path="/transactions/:id" element={<TransactionDetailPage />} />
+            <Route path="/members" element={<MembersPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/workspaces" element={<WorkspacesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
