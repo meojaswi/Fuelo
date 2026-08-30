@@ -1,14 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Package,
-  Plus,
-  Trash2,
-  Pencil,
-  X,
-  Save,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Package, Plus, Trash2, Pencil, X, Save } from "lucide-react";
 import {
   fetchInventory,
   createInventoryItem,
@@ -17,8 +8,10 @@ import {
 } from "../api/inventory.api";
 import Button from "../components/shared/Button";
 import SkeletonCard from "../components/shared/SkeletonCard";
+import { useAuth } from "../context/AuthContext";
 
 export default function InventoryPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
@@ -40,7 +33,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     loadInventory();
-  }, []);
+  }, [user?.workspaceId]);
 
   async function loadInventory() {
     setLoading(true);
@@ -157,16 +150,10 @@ export default function InventoryPage() {
       {message && (
         <div
           className={`flex items-center gap-2 rounded-[8px] p-4 text-sm font-medium ${
-            message.type === "error"
-              ? "bg-red-50 text-red-600"
-              : "bg-emerald-50 text-emerald-600"
+            message.type === "error" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
           }`}
         >
-          {message.type === "error" ? (
-            <AlertCircle size={16} />
-          ) : (
-            <CheckCircle2 size={16} />
-          )}
+          {message.type === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
           {message.text}
         </div>
       )}
@@ -300,10 +287,7 @@ export default function InventoryPage() {
           </div>
 
           {!showAdd && (
-            <Button
-              onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2"
-            >
+            <Button onClick={() => setShowAdd(true)} className="flex items-center gap-2">
               <Plus size={16} /> Add Item
             </Button>
           )}
@@ -367,11 +351,7 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowAdd(false)}
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={addLoading}>

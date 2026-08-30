@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { updateDealerRequest } from "../api/dealer.api";
@@ -7,7 +7,7 @@ import Button from "../components/shared/Button";
 
 export default function SettingsPage() {
   const { user, updateSession } = useAuth();
-  
+
   // Profile State
   const [businessName, setBusinessName] = useState(user?.businessName || "");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -15,6 +15,11 @@ export default function SettingsPage() {
 
   // Items State
   const [itemTypes, setItemTypes] = useState(user?.config?.itemTypes || []);
+
+  useEffect(() => {
+    setBusinessName(user?.businessName || "");
+    setItemTypes(user?.config?.itemTypes || []);
+  }, [user?.businessName, user?.config?.itemTypes]);
   const [newItemName, setNewItemName] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsMessage, setItemsMessage] = useState(null);
@@ -34,7 +39,10 @@ export default function SettingsPage() {
       updateSession({ dealer: data });
       setProfileMessage({ type: "success", text: "Profile updated successfully." });
     } catch (err) {
-      setProfileMessage({ type: "error", text: err.response?.data?.error || "Failed to update profile." });
+      setProfileMessage({
+        type: "error",
+        text: err.response?.data?.error || "Failed to update profile.",
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -43,10 +51,10 @@ export default function SettingsPage() {
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
-    
+
     setItemsLoading(true);
     setItemsMessage(null);
-    
+
     const updatedItems = [...itemTypes, newItemName.trim()];
     try {
       const data = await updateDealerRequest({ itemTypes: updatedItems });
@@ -64,7 +72,7 @@ export default function SettingsPage() {
   const handleRemoveItem = async (indexToRemove) => {
     setItemsLoading(true);
     setItemsMessage(null);
-    
+
     const updatedItems = itemTypes.filter((_, idx) => idx !== indexToRemove);
     try {
       const data = await updateDealerRequest({ itemTypes: updatedItems });
@@ -72,7 +80,10 @@ export default function SettingsPage() {
       updateSession({ dealer: data });
       setItemsMessage({ type: "success", text: "Item removed successfully." });
     } catch (err) {
-      setItemsMessage({ type: "error", text: err.response?.data?.error || "Failed to remove item." });
+      setItemsMessage({
+        type: "error",
+        text: err.response?.data?.error || "Failed to remove item.",
+      });
     } finally {
       setItemsLoading(false);
     }
@@ -88,7 +99,10 @@ export default function SettingsPage() {
       setNewPassword("");
       setSecurityMessage({ type: "success", text: "Password changed successfully." });
     } catch (err) {
-      setSecurityMessage({ type: "error", text: err.response?.data?.error || "Failed to change password." });
+      setSecurityMessage({
+        type: "error",
+        text: err.response?.data?.error || "Failed to change password.",
+      });
     } finally {
       setSecurityLoading(false);
     }
@@ -117,7 +131,9 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-slate-500">Vertical Type (Read-only)</label>
+            <label className="block text-sm font-semibold mb-1 text-slate-500">
+              Vertical Type (Read-only)
+            </label>
             <input
               type="text"
               value={user?.verticalType || ""}
@@ -126,13 +142,21 @@ export default function SettingsPage() {
             />
           </div>
           {profileMessage && (
-            <div className={`flex items-center gap-2 text-sm font-medium ${profileMessage.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-              {profileMessage.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+            <div
+              className={`flex items-center gap-2 text-sm font-medium ${profileMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
+            >
+              {profileMessage.type === "error" ? (
+                <AlertCircle size={16} />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
               {profileMessage.text}
             </div>
           )}
           <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={profileLoading}>Save Changes</Button>
+            <Button type="submit" disabled={profileLoading}>
+              Save Changes
+            </Button>
           </div>
         </form>
       </div>
@@ -141,15 +165,20 @@ export default function SettingsPage() {
       <div className="panel p-6">
         <div className="mb-4">
           <h3 className="font-bold text-lg">Item Types</h3>
-          <p className="text-sm text-slate-500">Configure the inventory items available for transactions in this workspace.</p>
+          <p className="text-sm text-slate-500">
+            Configure the inventory items available for transactions in this workspace.
+          </p>
         </div>
-        
+
         <div className="space-y-3 mb-6">
           {itemTypes.length === 0 ? (
             <div className="text-sm text-slate-400 italic py-2">No item types configured.</div>
           ) : (
             itemTypes.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between rounded-[8px] border border-slate-200 p-3 bg-slate-50">
+              <div
+                key={idx}
+                className="flex items-center justify-between rounded-[8px] border border-slate-200 p-3 bg-slate-50"
+              >
                 <span className="font-medium text-sm">{item}</span>
                 <button
                   onClick={() => handleRemoveItem(idx)}
@@ -175,13 +204,19 @@ export default function SettingsPage() {
               className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
             />
           </div>
-          <Button type="submit" disabled={itemsLoading || !newItemName.trim()} className="flex items-center gap-2">
+          <Button
+            type="submit"
+            disabled={itemsLoading || !newItemName.trim()}
+            className="flex items-center gap-2"
+          >
             <Plus size={16} /> Add
           </Button>
         </form>
         {itemsMessage && (
-          <div className={`mt-3 flex items-center gap-2 text-sm font-medium ${itemsMessage.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-            {itemsMessage.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+          <div
+            className={`mt-3 flex items-center gap-2 text-sm font-medium ${itemsMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
+          >
+            {itemsMessage.type === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
             {itemsMessage.text}
           </div>
         )}
@@ -212,13 +247,25 @@ export default function SettingsPage() {
             />
           </div>
           {securityMessage && (
-            <div className={`flex items-center gap-2 text-sm font-medium ${securityMessage.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-              {securityMessage.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+            <div
+              className={`flex items-center gap-2 text-sm font-medium ${securityMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
+            >
+              {securityMessage.type === "error" ? (
+                <AlertCircle size={16} />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
               {securityMessage.text}
             </div>
           )}
           <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={securityLoading} className="!bg-red-600 hover:!bg-red-700">Change Password</Button>
+            <Button
+              type="submit"
+              disabled={securityLoading}
+              className="!bg-red-600 hover:!bg-red-700"
+            >
+              Change Password
+            </Button>
           </div>
         </form>
       </div>

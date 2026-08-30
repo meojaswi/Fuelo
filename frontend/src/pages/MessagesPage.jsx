@@ -4,8 +4,10 @@ import { listNotifications, retryNotification } from "../api/notifications.api";
 import Pagination from "../components/shared/Pagination";
 import EmptyState from "../components/shared/EmptyState";
 import Button from "../components/shared/Button";
+import { useAuth } from "../context/AuthContext";
 
 export default function MessagesPage() {
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [data, setData] = useState({ notifications: [], total: 0, limit: 20 });
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     fetchMessages(page);
-  }, [page]);
+  }, [page, user?.workspaceId]);
 
   const handleRetry = async (id) => {
     setRetryingId(id);
@@ -75,15 +77,24 @@ export default function MessagesPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="max-w-[300px] truncate text-slate-600" title={msg.messageBody}>
+                        <div
+                          className="max-w-[300px] truncate text-slate-600"
+                          title={msg.messageBody}
+                        >
                           {msg.messageBody || "No content"}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          {msg.status === "sent" && <CheckCircle2 size={14} className="text-emerald-500" />}
-                          {msg.status === "failed" && <XCircle size={14} className="text-red-500" />}
-                          {msg.status === "pending" && <Clock size={14} className="text-amber-500" />}
+                          {msg.status === "sent" && (
+                            <CheckCircle2 size={14} className="text-emerald-500" />
+                          )}
+                          {msg.status === "failed" && (
+                            <XCircle size={14} className="text-red-500" />
+                          )}
+                          {msg.status === "pending" && (
+                            <Clock size={14} className="text-amber-500" />
+                          )}
                           <span
                             className={`text-xs font-semibold uppercase tracking-wider ${
                               msg.status === "sent"
@@ -112,7 +123,10 @@ export default function MessagesPage() {
                             disabled={retryingId === msg._id}
                             className="inline-flex items-center gap-1.5 rounded-[6px] bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
                           >
-                            <RefreshCcw size={12} className={retryingId === msg._id ? "animate-spin" : ""} />
+                            <RefreshCcw
+                              size={12}
+                              className={retryingId === msg._id ? "animate-spin" : ""}
+                            />
                             Retry
                           </button>
                         )}

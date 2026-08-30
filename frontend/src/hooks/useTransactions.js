@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { createTransaction, getTransaction, listTransactions } from "../api/transactions.api";
+import { useAuth } from "../context/AuthContext";
+
 export function useTransactions(params = {}) {
+  const { user } = useAuth();
   const [data, setData] = useState({ items: [], pages: 1, page: 1, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -20,12 +24,15 @@ export function useTransactions(params = {}) {
     } finally {
       setLoading(false);
     }
-  }, [JSON.stringify(params)]);
+  }, [JSON.stringify(params), user?.workspaceId]);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
   return { ...data, loading, error, refresh };
 }
+
 export function useTransaction(id) {
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
