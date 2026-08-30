@@ -126,13 +126,15 @@ export default function LoginPage() {
               className="pointer-events-none absolute bottom-6 left-6 h-4 w-4 border-b-2 border-l-2 border-fuelo-coral/25"
             />
 
-            <div className="relative mb-10 animate-fade-up">
-              <div className="mb-3 h-[2px] w-8 bg-fuelo-coral/60" />
-              <p className="mono-label">Welcome back</p>
-              <h2 className="mt-2 text-2xl font-bold">
-                Sign in to fuelo<span className="text-fuelo-coral">.</span>
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">Continue to your workspace.</p>
+            <div className="relative mb-10 animate-fade-up [animation-delay:20ms] bg-fuelo-coral/20 p-4 text-center">
+              <div className="relative mb-10 animate-fade-up">
+                <div className="mb-3 h-[2px] w-8 bg-fuelo-coral/60" />
+                <p className="mono-label">Welcome back</p>
+                <h2 className="mt-2 text-2xl font-bold">
+                  Sign in to fuelo<span className="text-fuelo-coral ">.</span>
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">Continue to your workspace.</p>
+              </div>
             </div>
 
             <form
