@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./layouts/AppShell";
 import LoginPage from "./pages/LoginPage";
+import PricingPage from "./pages/PricingPage";
+import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import NewTransactionPage from "./pages/NewTransactionPage";
 import TransactionListPage from "./pages/TransactionListPage";
@@ -21,6 +23,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="/receipt/:token" element={<SharedReceiptPage />} />
       <Route
         path="/*"
