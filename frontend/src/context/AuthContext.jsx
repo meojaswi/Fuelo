@@ -31,12 +31,12 @@ export function AuthProvider({ children }) {
       const u = d.user || d.client || d.dealer || null;
       setUser(u);
       if (u) localStorage.setItem("fuelo_user", JSON.stringify(u));
-      
+
       if (d.workspaces) {
         setWorkspaces(d.workspaces);
         localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
       }
-      
+
       return d;
     } finally {
       setLoading(false);
@@ -45,13 +45,22 @@ export function AuthProvider({ children }) {
 
   function updateSession(d) {
     if (d.token) setToken(d.token);
+
     if (d.dealer) {
-      setUser(d.dealer);
-      localStorage.setItem("fuelo_user", JSON.stringify(d.dealer));
+      const nextUser = { ...(user || {}), ...d.dealer };
+      setUser(nextUser);
+      localStorage.setItem("fuelo_user", JSON.stringify(nextUser));
     }
+
     if (d.workspaces) {
-        setWorkspaces(d.workspaces);
-        localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
+      setWorkspaces(d.workspaces);
+      localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
+    } else if (d.dealer && workspaces.length) {
+      const nextWorkspaces = workspaces.map((ws) =>
+        ws.workspaceId === d.dealer.workspaceId ? { ...ws, ...d.dealer } : ws
+      );
+      setWorkspaces(nextWorkspaces);
+      localStorage.setItem("fuelo_workspaces", JSON.stringify(nextWorkspaces));
     }
   }
   function logout() {
@@ -63,7 +72,10 @@ export function AuthProvider({ children }) {
   }
   return (
     <C.Provider
-      value={useMemo(() => ({ token, user, workspaces, loading, login, logout, updateSession }), [token, user, workspaces, loading])}
+      value={useMemo(
+        () => ({ token, user, workspaces, loading, login, logout, updateSession }),
+        [token, user, workspaces, loading]
+      )}
     >
       {children}
     </C.Provider>
