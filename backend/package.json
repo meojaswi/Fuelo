@@ -1,7 +1,7 @@
 {
   "name": "fuelo-backend",
   "version": "1.0.0",
-  "description": "Fuelo / Satyadev Workspace backend — config-driven multi-vertical invoicing & credit tracking",
+  "description": "Fuelo / backend — config-driven multi-vertical invoicing & credit tracking",
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
