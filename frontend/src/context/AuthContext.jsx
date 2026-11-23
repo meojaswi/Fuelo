@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem("fuelo_token"));
   const [user, setUser] = useState(() => readSessionValue("fuelo_user", null));
   const [workspaces, setWorkspaces] = useState(() => readSessionValue("fuelo_workspaces", []));
+  const [account, setAccount] = useState(() => readSessionValue("fuelo_account", null));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export function AuthProvider({ children }) {
       setToken(localStorage.getItem("fuelo_token"));
       setUser(readSessionValue("fuelo_user", null));
       setWorkspaces(readSessionValue("fuelo_workspaces", []));
+      setAccount(readSessionValue("fuelo_account", null));
     };
     window.addEventListener(sessionEvent, sync);
     return () => window.removeEventListener(sessionEvent, sync);
@@ -57,7 +59,17 @@ export function AuthProvider({ children }) {
     };
   }, [token]);
 
-  function updateSession({ token: nextToken, refreshToken, dealer, workspaces: nextWorkspaces }) {
+  function updateSession({
+    token: nextToken,
+    refreshToken,
+    dealer,
+    workspaces: nextWorkspaces,
+    account: nextAccount,
+  }) {
+    if (nextAccount) {
+      localStorage.setItem("fuelo_account", JSON.stringify(nextAccount));
+      setAccount(nextAccount);
+    }
     if (refreshToken) localStorage.setItem(refreshStorageKey, refreshToken);
     if (nextToken) {
       localStorage.setItem("fuelo_token", nextToken);
@@ -103,7 +115,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <C.Provider value={{ token, user, workspaces, loading, login, signup, logout, updateSession }}>
+    <C.Provider value={{ token, user, account, workspaces, loading, login, signup, logout, updateSession }}>
       {children}
     </C.Provider>
   );

@@ -7,6 +7,7 @@ import {
   deleteInventoryItem,
 } from "../api/inventory.api";
 import Button from "../components/shared/Button";
+import Modal from "../components/shared/Modal";
 import SkeletonCard from "../components/shared/SkeletonCard";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, formatDate as formatDateTime, formatQuantity } from "../utils/formatters";
@@ -32,6 +33,7 @@ export default function InventoryPage() {
   const [editValues, setEditValues] = useState({ currentStock: "", pricePerUnit: "" });
   const [editLoading, setEditLoading] = useState(false);
   const [deletingIdx, setDeletingIdx] = useState(null);
+  const [confirmIdx, setConfirmIdx] = useState(null);
 
   async function loadInventory() {
     setLoading(true);
@@ -114,7 +116,6 @@ export default function InventoryPage() {
   async function handleDelete(idx) {
     const item = items[idx];
     if (deletingIdx !== null) return;
-    if (!window.confirm(`Delete "${item.itemType}" from inventory?`)) return;
     setDeletingIdx(idx);
     setMessage(null);
     try {
@@ -128,6 +129,7 @@ export default function InventoryPage() {
       });
     } finally {
       setDeletingIdx(null);
+      setConfirmIdx(null);
     }
   }
 
@@ -283,7 +285,7 @@ export default function InventoryPage() {
                               <Pencil size={14} />
                             </button>
                             <button
-                              onClick={() => handleDelete(idx)}
+                              onClick={() => setConfirmIdx(idx)}
                               className="grid h-11 w-11 place-items-center rounded-[6px] text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
                               title="Delete"
                               aria-label={`Delete ${item.itemType}`}
@@ -382,6 +384,33 @@ export default function InventoryPage() {
           </form>
         </div>
       )}
+      <Modal
+        open={confirmIdx !== null}
+        title="Delete inventory item"
+        onClose={() => deletingIdx === null && setConfirmIdx(null)}
+      >
+        <p className="text-sm text-slate-600">
+          Delete &quot;{items[confirmIdx]?.itemType}&quot; from inventory?
+        </p>
+        <div className="mt-5 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={deletingIdx !== null}
+            onClick={() => setConfirmIdx(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            loading={deletingIdx !== null}
+            onClick={() => handleDelete(confirmIdx)}
+          >
+            Delete item
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

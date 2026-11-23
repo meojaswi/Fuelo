@@ -36,14 +36,28 @@ export function useTransactions(params = {}) {
 }
 
 export function useTransaction(id) {
-  const [transaction, setTransaction] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [result, setResult] = useState(null);
   useEffect(() => {
+    let active = true;
     getTransaction(id)
-      .then(setTransaction)
-      .catch(() => setTransaction(null))
-      .finally(() => setLoading(false));
-  }, [id]);
-  return { transaction, loading };
+      .then((transaction) => {
+        if (active) setResult({ id, attempt, transaction });
+      })
+      .catch((err) => {
+        if (active)
+          setResult({ id, attempt, transaction: null, notFound: err.response?.status === 404 });
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, attempt]);
+  const current = result?.id === id && result.attempt === attempt ? result : null;
+  return {
+    transaction: current?.transaction ?? null,
+    loading: !current,
+    notFound: Boolean(current?.notFound),
+    reload: () => setAttempt((value) => value + 1),
+  };
 }
 export { createTransaction };

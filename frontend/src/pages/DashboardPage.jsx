@@ -8,8 +8,17 @@ import ItemStatRow from "../components/dashboard/ItemStatRow";
 import NotificationBanner from "../components/dashboard/NotificationBanner";
 import RecentTransactionList from "../components/dashboard/RecentTransactionList";
 import SkeletonCard from "../components/shared/SkeletonCard";
+function greeting(name) {
+  const hour = new Date().getHours();
+  const part = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  return `Good ${part}${name ? `, ${name}` : ""}.`;
+}
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, account } = useAuth();
+  const accountName = account?.name?.trim();
+  const firstName =
+    accountName && accountName !== user?.businessName ? accountName.split(/s+/)[0] : "";
   const { summary, loading, error } = useDailySummary();
   const { items } = useTransactions({ limit: 8, today: true });
   if (loading)
@@ -24,7 +33,7 @@ export default function DashboardPage() {
       <div className="flex items-end justify-between">
         <div>
           <p className="mono-label">Workspace overview</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight">Good morning.</h2>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight">{greeting(firstName)}</h2>
           <p className="mt-1 text-sm text-slate-500">
             Here’s what’s happening in your ledger today.
           </p>

@@ -291,6 +291,17 @@ Run each check at 360px (phone), 768px and 1280px in the real browser with real 
 
 - [ ] **App shell, top bar and bottom nav:** the back arrow and the bell are 44px and announced as "Go back" and "Notifications". The workspace switcher announces whether it is expanded. Sidebar links, "Sign out" and the mobile operations strip are at least 44px tall. The page loading text is announced.
 
+### Follow-up changes (added 2026-11-23)
+
+- [ ] **Item filter on Transactions:** in a fuel workspace the pills are the configured items (Diesel, Petrol, CNG if nothing is configured). In a timber workspace they are the configured timber items, not Diesel, Petrol or CNG. Selecting pills filters the list. A workspace with no items shows no filter.
+- [ ] **Item type on New transaction:** a fuel workspace shows its configured items. A timber workspace shows the timber sale form with its own items.
+- [ ] **Transaction detail, not found:** open `/transactions/<a made-up id>`. It says the transaction was not found and offers a link back to Transactions, with no Retry button.
+- [ ] **Transaction detail, load failure:** turn the network off (or stop the backend) and open a real transaction. A red message with a **Retry** button appears. Turn the network back on and tap Retry. The transaction loads without a page reload.
+- [ ] **Dashboard greeting:** it says Good morning before noon, Good afternoon from noon to 5pm and Good evening after that, using the phone's clock. Signed in fresh (log out and in), it adds your first name. If your account name is the same as the business name, no name is added.
+- [ ] **Dashboard "Dispensed / sold":** with sales in two units (for example litres and kilograms) each unit has its own line and the two are not added together.
+- [ ] **Terms and Privacy:** the footer on Login, Signup and Pricing links to `/terms` and `/privacy`. Both open while signed out and say they are placeholder text. The footer no longer has a Status link.
+- [ ] **Inventory delete:** the trash icon opens a dialog naming the item. Cancel closes it with nothing deleted. **Delete item** shows a spinner, removes only that item, and shows the same "removed" message as before. Close and Cancel are disabled while it runs.
+
 ---
 
 ## Failure log

@@ -77,8 +77,8 @@ Found during the DESIGN.md section 13 pass over every page and layout. Each one 
 - [ ] **Wide tables scroll inside their own box on phones instead of becoming stacked cards** (DESIGN section 8). Affects Inventory, Messages, Sales report, Pump Report (three tables) and Timber Reports. The page itself does not scroll sideways, but the tables are awkward on a phone. Needs a responsive `Table` component.
 
 **Units and formatting that need data the screen does not have**
-- [ ] **Dashboard "Opening stock" and "Dispensed / sold" show no unit.** The backend adds the quantities of every item together (`dashboard.controller.js`), so there is no single unit. Return a unit or per-item totals, then show them.
-- [ ] **Sales report "Quantity" column has no unit and can add litres to kilograms** when grouped by day or payment mode. Needs a unit per row or a split by unit from the API.
+- [ ] **Dashboard "Opening stock" is always "—".** `GET /dashboard/daily-summary` does not return `openingStock`. "Dispensed / sold" is now split by unit on the client from the per-item rows.
+- [ ] **Sales report "Quantity" can add litres to kilograms and shows no unit.** The API sums quantity across units and its rows carry no unit (`reports.controller.js`), so the client cannot split it. Group by item and unit on the server, or return a unit per row.
 - [ ] **Timber Reports show raw numbers** for every report except the GST summary amounts (fixed). The columns come from the server, so the screen cannot tell money from quantity. Have the API send a type per column.
 
 **Accessibility that changes behaviour**
@@ -89,17 +89,14 @@ Found during the DESIGN.md section 13 pass over every page and layout. Each one 
 
 **Behaviour left as it is**
 - [ ] **Transaction detail "Retry message" reloads the whole page** (`location.reload()`) and has no error handling, so a failed retry shows nothing.
-- [ ] **Transaction detail shows "Transaction not found." for any load failure**, including a network error. It cannot tell the two apart.
-- [ ] **Delete workspace, delete inventory item and remove item type use `window.confirm`**, not the shared `Modal` with a reason (DESIGN button rules).
-- [ ] **Item filters hard-code Diesel, Petrol and CNG** (`ItemTypeFilter`, `ItemTypeSelector`), so a timber or other workspace cannot filter transactions by its own items.
+- [ ] **Delete workspace and cancel subscription still use `window.confirm`**, not the shared `Modal`. Removing an item type in Settings has no confirmation at all (my earlier note that it used `window.confirm` was wrong). Inventory delete now uses the Modal.
 - [ ] **Inventory page: if the list fails to load, it shows the error and also "No inventory items yet".**
 - [ ] **Not every sending button uses the shared `loading` prop.** The inventory row save icon, the Workspaces "Switch" buttons (one shared flag) and the signed-in Pricing plan buttons disable themselves and block a second tap, but show no spinner. Spinners need a per-row or per-plan flag and, for Pricing, a restyle of the button.
-- [ ] **Dashboard greeting always says "Good morning."**
 
 **Design system (DESIGN section 12, not touched)**
 - [ ] **Raw hex in `index.css`** (`#191c21`, `#111827`, `#cc8066`), leftover Vite CSS in `App.css`, and `rounded-lg` and `rounded-[6px]` on a few pages. The dot-texture hex in Login and Signup was replaced with a Tailwind token.
 - [ ] **Status colors are still ad hoc Tailwind classes**, with no shared `Badge`, `Alert`, `Table` or `Card`. Status always has text or an icon next to the color on the screens checked.
-- [ ] **Login, Signup and Pricing footer links (Privacy, Terms, Status) point to `#`.** This links to the existing item about privacy policy and terms pages.
+- [ ] **Replace the placeholder Terms and Privacy pages (`/terms`, `/privacy`) with real legal text.** They are static pages marked "placeholder, to be replaced by real legal text". The footer "Status" link was removed because there is no status page; add it back when one exists.
 
 ## Resolved
 

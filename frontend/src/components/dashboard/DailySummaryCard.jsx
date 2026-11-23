@@ -1,5 +1,16 @@
 import { formatCurrency, formatQuantity } from "../../utils/formatters";
+// Add quantities per unit so litres and kilograms are never summed together.
+function soldByUnit(summary) {
+  const totals = new Map();
+  for (const item of summary?.items ?? []) {
+    const unit = item.unit || "units";
+    totals.set(unit, (totals.get(unit) ?? 0) + Number(item.quantity || 0));
+  }
+  return [...totals].map(([unit, quantity]) => `${formatQuantity(quantity)} ${unit}`);
+}
+
 export default function DailySummaryCard({ summary }) {
+  const sold = soldByUnit(summary);
   const sales = summary?.sales ?? summary?.revenue ?? 0;
   return (
     <section className="relative overflow-hidden rounded-[8px] bg-fuelo-surface p-6 text-white shadow-panel md:p-7">
@@ -20,7 +31,7 @@ export default function DailySummaryCard({ summary }) {
             label="Opening stock"
             value={summary?.openingStock == null ? "—" : formatQuantity(summary.openingStock)}
           />
-          <Metric label="Dispensed / sold" value={formatQuantity(summary?.sold)} />
+          <Metric label="Dispensed / sold" value={sold.length ? sold : "0"} />
           <Metric label="Today's sales" value={formatCurrency(sales)} />
         </div>
       </div>
@@ -31,7 +42,11 @@ function Metric({ label, value }) {
   return (
     <div>
       <p className="text-xs text-white/45">{label}</p>
-      <p className="mt-1 text-xl font-bold">{value}</p>
+      {(Array.isArray(value) ? value : [value]).map((line) => (
+        <p key={line} className="mt-1 text-xl font-bold">
+          {line}
+        </p>
+      ))}
     </div>
   );
 }

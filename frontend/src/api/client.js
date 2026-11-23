@@ -11,17 +11,18 @@ export const billingEvent = "fuelo:billing";
 let refreshInFlight;
 
 export function clearSession() {
-  for (const key of ["fuelo_token", "fuelo_user", "fuelo_workspaces", refreshStorageKey]) {
+  for (const key of ["fuelo_token", "fuelo_user", "fuelo_workspaces", "fuelo_account", refreshStorageKey]) {
     localStorage.removeItem(key);
   }
   window.dispatchEvent(new CustomEvent(sessionEvent, { detail: null }));
 }
 
-export function persistSession({ token, refreshToken, dealer, workspaces }) {
+export function persistSession({ token, refreshToken, dealer, workspaces, account }) {
   if (token) localStorage.setItem("fuelo_token", token);
   if (refreshToken) localStorage.setItem(refreshStorageKey, refreshToken);
   if (dealer) localStorage.setItem("fuelo_user", JSON.stringify(dealer));
   if (workspaces) localStorage.setItem("fuelo_workspaces", JSON.stringify(workspaces));
+  if (account) localStorage.setItem("fuelo_account", JSON.stringify(account));
   window.dispatchEvent(new CustomEvent(sessionEvent));
 }
 

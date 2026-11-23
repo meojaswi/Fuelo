@@ -4,6 +4,7 @@ import { lazy, Suspense } from "react";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SharedReceiptPage from "./pages/SharedReceiptPage";
+import LegalPage from "./pages/LegalPage";
 import { useAuth } from "./context/AuthContext";
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
@@ -38,6 +39,8 @@ export default function App() {
         }
       />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/terms" element={<LegalPage kind="terms" />} />
+      <Route path="/privacy" element={<LegalPage kind="privacy" />} />
       <Route path="/share/:token" element={<SharedReceiptPage />} />
       <Route path="/receipt/:token" element={<SharedReceiptPage />} />
       <Route

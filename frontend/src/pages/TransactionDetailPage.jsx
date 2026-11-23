@@ -16,7 +16,7 @@ export default function TransactionDetailPage() {
   const { user } = useAuth();
   const can = (permission) => user?.permissions?.includes(permission);
   const { id } = useParams(),
-    { transaction: t, loading } = useTransaction(id),
+    { transaction: t, loading, notFound, reload } = useTransaction(id),
     [busy, setBusy] = useState(false),
     [pdfError, setPdfError] = useState("");
   const [voided, setVoided] = useState(null);
@@ -28,7 +28,28 @@ export default function TransactionDetailPage() {
   const status = voided?._id === id ? voided : t;
   if (loading)
     return <div className="py-16 text-center text-sm text-slate-400">Loading transaction…</div>;
-  if (!t) return <p>Transaction not found.</p>;
+  if (!t && notFound)
+    return (
+      <div className="space-y-3">
+        <p role="alert" className="text-sm text-slate-600">
+          Transaction not found. It may have been removed, or the link is wrong.
+        </p>
+        <Link className="inline-flex min-h-11 items-center font-semibold text-fuelo-coral" to="/transactions">
+          Back to transactions
+        </Link>
+      </div>
+    );
+  if (!t)
+    return (
+      <div className="space-y-3">
+        <p role="alert" className="text-sm text-red-600">
+          Could not load this transaction. Check your connection and try again.
+        </p>
+        <Button type="button" variant="secondary" onClick={reload}>
+          Retry
+        </Button>
+      </div>
+    );
   async function confirmVoid(event) {
     event.preventDefault();
     setVoiding(true);
