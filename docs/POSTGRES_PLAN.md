@@ -1,8 +1,12 @@
 # PostgreSQL migration plan
 
-## Step 0 finding
+## Precision and compatibility
 
-An untracked cash sale with amount 1,000,000,000,000 and quantity 1.2345 returned HTTP 201. A subsequent detail request returned HTTP 200 with both values unchanged. The current money input cap is `Number.MAX_SAFE_INTEGER / 100`, and the generic sale accepts any finite positive quantity. `NUMERIC(14,2)` tops out at 999,999,999,999.99. `NUMERIC(14,3)` rounds 1.2345 to 1.235. Keeping the exact legacy API and the specified precision and scale therefore requires a decision before the schema work begins.
+An untracked cash sale with amount 1,000,000,000,000 and quantity 1.2345 returned HTTP 201. A subsequent detail request returned HTTP 200 with both values unchanged. The permanent precision test checks both responses. The migration preserves validation and existing rounding.
+
+Use `NUMERIC(20,2)` for money already rounded to cents and `NUMERIC(20,4)` for bounded quantities that fit its scale and magnitude. Review every rate and price against its validator and write path, with at least four decimals where existing code preserves them. The generic sale quantity accepts any finite positive JavaScript number and has no decimal or magnitude cap, so a fixed precision cannot represent the full accepted magnitude range. Document columns that need wider types and any precision differences in the migration report. Convert database numerics to JSON numbers at the resource boundary and record JavaScript safe-integer limitations.
+
+The schema uses unconstrained `NUMERIC` for `transactions.quantity`, `inventory.current_stock` and the associated `stock_movements.delta` and `stock_movements.balance_after`. Those fields can carry unrounded, unconstrained generic sale or inventory values, such as `1.23456` and `1e30`. Timber inventory's `default_thickness_in` accepts unrounded dimensions, such as `0.123456`, and uses the same type. Seeded revenue share percentages also have no rounding step. Inventory prices, delivery rates and GST rates retain two decimals because their write paths already round them.
 
 Customer listing with `search` uses MongoDB text search. The separate autocomplete route uses a case-insensitive, escaped name prefix and caps results at ten. Preserve that route behavior when adding the trigram index. A plain substring search changes the matches for both routes.
 
@@ -30,6 +34,8 @@ The aggregation files are `customers.controller.js` (outstanding), `reports.cont
 | Billing           | `subscription_plans` (unique name and billing cycle), `workspace_subscriptions` (unique Razorpay subscription ID), `linked_revenue_accounts`, `webhook_events`                                                                                                                                                       |
 
 The legacy Dealer collection has no target table.
+
+Retain removed inventory rows internally so historical voided sales keep their original inventory ID. An active-only unique index permits recreating an item type with a new ID after removal. Apply the same active-only predicate to normal stock reads and writes. Keep refresh-token replacement links global because an account can switch a live token to another workspace. Tank stock bounds depend on whether the write path permits negative stock or overflow, so enforce the existing rules in the write transaction.
 
 ## MongoDB features and SQL replacements
 

@@ -47,6 +47,8 @@ Legend: `[ ]` open · `[x]` resolved (add the date and a note)
 
 ## Data and infrastructure
 
+- [ ] Add sensible upper limits to amounts and quantities, and restrict decimals, in the API validation. Today the API accepts absurd values such as an amount of 1,000,000,000,000 and a quantity with four decimals.
+
 - [ ] MongoDB is a replica set (stock and credit writes rely on transactions)
 - [ ] Atlas backups enabled, and a restore tried at least once
 - [ ] Indexes: `autoIndex` is still on. Fine for an empty database; revisit once there is real data
