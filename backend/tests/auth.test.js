@@ -13,13 +13,24 @@ const {
 const { createHmac } = require("node:crypto");
 const { query } = require("../src/config/postgres");
 const { isolatedPostgres } = require("./helpers/postgres");
+const mongoAuthContract = require("./contract/auth.json");
 
 isolatedPostgres();
+
+function assertContract(method, route, response) {
+  const { data, status } = response;
+  const shape = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value]));
+  const expected = mongoAuthContract.find(
+    (entry) => entry.method === method && entry.route === route && entry.status === status
+  );
+  assert.deepEqual({ method, route, status, shape }, expected);
+}
 
 test("health endpoints, security headers, and browser origin allowlist", async () => {
   assert.equal((await request("/health")).status, 200);
   const allowed = await request("/api/health", { origin: "http://localhost:5173" });
   assert.equal(allowed.status, 200);
+  assertContract("GET", "/api/health", allowed);
   assert.equal(allowed.headers.get("access-control-allow-origin"), "http://localhost:5173");
   assert.equal(allowed.headers.get("x-content-type-options"), "nosniff");
   const disallowed = await request("/api/health", { origin: "https://example.test" });
@@ -137,6 +148,7 @@ test("OTP recovery is generic, rate-limited per challenge, and resets the passwo
     request("/api/auth/otp/request", { method: "POST", body: { phone: candidate } });
   const response = await ask(phone);
   assert.equal(response.status, 202);
+  assertContract("POST", "/api/auth/otp/request", response);
   assert.deepEqual(response.data, (await ask("9000000999")).data);
   await ask(phone);
   assert.equal(await jobs.countDocuments({ workspaceId: user.dealer.workspaceId }), 1);
@@ -147,8 +159,12 @@ test("OTP recovery is generic, rate-limited per challenge, and resets the passwo
       method: "POST",
       body: { phone, code: candidate, password: "new-test-password" },
     });
-  assert.equal((await verify(code === "111111" ? "000000" : "111111")).status, 400);
-  assert.equal((await verify(code)).status, 200);
+  const incorrect = await verify(code === "111111" ? "000000" : "111111");
+  assert.equal(incorrect.status, 400);
+  assertContract("POST", "/api/auth/otp/verify", incorrect);
+  const verified = await verify(code);
+  assert.equal(verified.status, 200);
+  assertContract("POST", "/api/auth/otp/verify", verified);
   assert.equal((await verify(code)).status, 400);
   assert.equal((await request("/api/inventory", { token: user.token })).status, 401);
 });

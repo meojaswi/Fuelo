@@ -51,3 +51,9 @@ Retain removed inventory rows internally so historical voided sales keep their o
 ## MongoDB baseline
 
 `npm.cmd test` passed 37 tests. A second run with temporary response capture and the precision probe passed 38 tests. The notification list and retry fixture uses a separate passing test with a seeded failed message record. Snapshot files record JSON status, route templates and field types. They omit concrete values, query strings and non-JSON response bodies. The existing suite continues to check concrete values, filters, error responses and other behavior.
+
+## Cutover status
+
+Password challenges and the daily scheduler lock use PostgreSQL. Password recovery and health route tests compare against the MongoDB fixtures. The remaining business routes still use MongoDB, including the sale route exercised by the permanent precision test. The schema integration suite independently checks the same sale values in PostgreSQL, composite foreign keys, rollback of invoice sequences and contention between queue workers and scheduler locks.
+
+Workspace context is set locally for scoped SQL transactions. RLS remains open until the tenant repositories and designated cross-workspace paths are connected and can be tested with roles that cannot bypass policies. Invoice upserts and queue row locks are covered at the repository level. Their production callers still need to be ported before the guarantees apply to live traffic.

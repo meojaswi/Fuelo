@@ -2,6 +2,8 @@
 
 The entry point for understanding the app. It describes what happens, from a visitor opening the site to a nightly summary landing on WhatsApp. For testing, see [QA.md](QA.md). For backend setup, see [backend/README.md](backend/README.md).
 
+The PostgreSQL migration branch uses PostgreSQL for password recovery challenges, their expiry cleanup, and the daily scheduler lock. The scheduler uses the unique job name and IST run date to let one instance acquire each daily run. The nightly summary, message worker, and remaining application data still use the MongoDB paths below. The target schema and cutover status are tracked in [POSTGRES_PLAN.md](docs/POSTGRES_PLAN.md).
+
 > Status: this describes Phases 0 through 3b as built. Section 16 lists planned work. Phase 2 was verified with local backend tests and a Chrome smoke test. Phases 3a and 3b passed local backend tests in both MongoDB modes and Chrome workflow checks. Live Twilio delivery, live Razorpay Checkout and hosted CI for this working tree remain unverified. Use QA.md to track staging checks.
 
 ---
