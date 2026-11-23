@@ -1,10 +1,12 @@
 const app = require("./app");
 const env = require("./config/env");
 const connectDB = require("./config/db");
+const { query } = require("./config/postgres");
 const logger = require("./utils/logger");
 const { startScheduler } = require("./services/scheduler.service");
 
 async function start() {
+  await query("SELECT 1");
   await connectDB();
   startScheduler();
 

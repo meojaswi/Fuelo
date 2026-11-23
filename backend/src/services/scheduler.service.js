@@ -1,9 +1,10 @@
 const cron = require("node-cron");
-const SchedulerLock = require("../models/schedulerLock.model");
+const { acquireDailyLock } = require("../repositories/schedulerLocks");
 const Workspace = require("../models/workspace.model");
 const Membership = require("../models/membership.model");
 const UserAccount = require("../models/userAccount.model");
 const DailySummary = require("../models/dailySummary.model");
+const { deleteExpired } = require("../repositories/passwordOtps");
 const messageQueue = require("./messageQueue.service");
 const messageBuilder = require("./messageBuilder.service");
 const dashboardService = require("./dashboard.service");
@@ -11,24 +12,15 @@ const { IST_TIME_ZONE, istDateString } = require("../utils/datetime");
 const { roundMoney } = require("../utils/money");
 const logger = require("../utils/logger");
 
-/**
- * Tries to acquire a one-per-day lock for a named job. Returns true if this
- * process won the lock and should run the job. Relies on the unique index
- * on {jobName, runDate} — a duplicate-key error means another replica
- * already grabbed it, so we skip. Prevents double-sending EOD summaries if
- * Railway ever runs more than one instance.
- */
-async function acquireDailyLock(jobName, runDate = istDateString()) {
-  try {
-    await SchedulerLock.create({ jobName, runDate });
-    return true;
-  } catch (err) {
-    if (err.code === 11000) return false; // already acquired elsewhere
-    throw err;
-  }
-}
-
 function startScheduler() {
+  cron.schedule("0 * * * *", async () => {
+    try {
+      await deleteExpired();
+    } catch (err) {
+      logger.error({ msg: "Password challenge cleanup failed", code: err.code });
+    }
+  });
+
   // Drain the message queue every 30 seconds — cheap, no external broker.
   cron.schedule("*/30 * * * * *", async () => {
     try {

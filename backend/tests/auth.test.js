@@ -10,6 +10,11 @@ const {
   UserAccount,
   hashPassword,
 } = require("./helpers/api");
+const { createHmac } = require("node:crypto");
+const { query } = require("../src/config/postgres");
+const { isolatedPostgres } = require("./helpers/postgres");
+
+isolatedPostgres();
 
 test("health endpoints, security headers, and browser origin allowlist", async () => {
   assert.equal((await request("/health")).status, 200);
@@ -146,6 +151,29 @@ test("OTP recovery is generic, rate-limited per challenge, and resets the passwo
   assert.equal((await verify(code)).status, 200);
   assert.equal((await verify(code)).status, 400);
   assert.equal((await request("/api/inventory", { token: user.token })).status, 401);
+});
+
+test("an expired recovery code is rejected before scheduled cleanup", async () => {
+  const phone = "9000000062";
+  const user = await phaseWorkspace(phone);
+  const issue = await request("/api/auth/otp/request", { method: "POST", body: { phone } });
+  assert.equal(issue.status, 202);
+  const jobs = require("../src/models/messageJob.model");
+  const job = await jobs.findOne({ workspaceId: user.dealer.workspaceId });
+  const code = job.body.match(/\b\d{6}\b/)[0];
+  const phoneHash = createHmac("sha256", process.env.JWT_SECRET)
+    .update("otp-phone:" + phone)
+    .digest("hex");
+  const update = await query("UPDATE password_otps SET expires_at = now() WHERE phone_hash = $1", [
+    phoneHash,
+  ]);
+  assert.equal(update.rowCount, 1);
+  const result = await request("/api/auth/otp/verify", {
+    method: "POST",
+    body: { phone, code, password: "new-test-password" },
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(result.data, { error: "Invalid or expired code" });
 });
 
 test("session flags and receipt language follow the workspace", async () => {

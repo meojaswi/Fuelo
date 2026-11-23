@@ -1,10 +1,13 @@
 # Fuelo backend
 
-Fuelo uses Express and MongoDB. Use Node 22 and start a local MongoDB instance before running the API.
+Fuelo uses Express. During the storage migration, the API uses PostgreSQL for password recovery and the nightly scheduler lock, and MongoDB for remaining application data. Use Node 22.
+
+From the repository root, set `FUELO_POSTGRES_PASSWORD` in your shell and run `docker compose up -d --wait postgres`. In `backend/.env`, set `DATABASE_URL` to `postgresql://fuelo:<password>@127.0.0.1:5432/fuelo` using the same URL-encoded password. Start MongoDB and set `MONGO_URI` for the remaining application modules. Create a separate PostgreSQL database and export its URL as `DATABASE_URL_TEST` for integration tests.
 
 ```sh
 npm ci
 cp .env.example .env
+npm run migrate
 npm run dev
 npm test
 ```
@@ -15,6 +18,9 @@ The default API base URL is `http://localhost:8000/api`. Health checks are avail
 | --- | --- |
 | `NODE_ENV`, `PORT` | Runtime environment and HTTP port. Defaults are development and 8000. |
 | `MONGO_URI` | Required MongoDB connection string. |
+| `DATABASE_URL` | PostgreSQL connection string for the API and migrations. |
+| `DATABASE_URL_TEST` | Separate PostgreSQL test database. Tests create and drop a schema for each integration test file that uses PostgreSQL. |
+| `PGSSL` | Set to `true` to require verified TLS, or `false` for a local database without TLS. Alternatively, use SSL options in the connection URL. |
 | `JWT_SECRET` | Required signing secret. Production requires at least 32 characters. |
 | `BCRYPT_SALT_ROUNDS` | Password hash cost. Access tokens last 15 minutes. |
 | `TRUST_PROXY_HOPS` | Number of trusted reverse proxy hops. Defaults to `0` for direct access. |

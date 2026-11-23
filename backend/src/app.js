@@ -5,6 +5,7 @@ const { rateLimit } = require("express-rate-limit");
 const pinoHttp = require("pino-http");
 
 const env = require("./config/env");
+const { query } = require("./config/postgres");
 const logger = require("./utils/logger");
 const asyncHandler = require("./middleware/asyncHandler.middleware");
 const { errorHandler } = require("./middleware/errorHandler.middleware");
@@ -80,7 +81,13 @@ app.use(
   })
 );
 
-app.get(["/health", "/api/health"], (req, res) => res.json({ ok: true }));
+app.get(
+  ["/health", "/api/health"],
+  asyncHandler(async (req, res) => {
+    await query("SELECT 1");
+    res.json({ ok: true });
+  })
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/members", membersRoutes);

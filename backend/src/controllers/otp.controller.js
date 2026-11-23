@@ -1,6 +1,6 @@
 const audit = require("../services/audit.service");
 const { createHmac, randomInt } = require("node:crypto");
-const Otp = require("../models/passwordOtp.model");
+const Otp = require("../repositories/passwordOtps");
 const UserAccount = require("../models/userAccount.model");
 const { activeWorkspaces, changeCredentials } = require("./auth.controller");
 const { hashPassword } = require("../services/auth.service");
@@ -20,37 +20,32 @@ async function request(req, res) {
   const code = String(randomInt(1_000_000)).padStart(6, "0");
   const now = new Date();
   try {
-    await Otp.updateOne(
-      { phoneHash, sentAt: { $lte: new Date(+now - 60_000) } },
-      {
-        $setOnInsert: { phoneHash },
-        $set: {
-          codeHash: hash(phoneHash + ":" + code),
-          sentAt: now,
-          expiresAt: new Date(+now + 600_000),
-          attempts: 0,
-        },
-        $unset: { usedAt: 1 },
-      },
-      { upsert: true }
-    );
-    const user = await UserAccount.findOne({ phone, isActive: { $ne: false } }).select(
-      "+passwordHash"
-    );
-    if (user?.passwordHash) {
-      const [membership] = await activeWorkspaces(user._id);
-      if (membership)
-        await enqueue({
-          workspaceId: membership.workspace.workspaceId,
-          channel: "whatsapp",
-          toPhone: phone.length === 10 ? "+91" + phone : phone,
-          ...buildPasswordOtp(code, membership.workspace),
-          sensitive: true,
-          deliveryExpiresAt: new Date(+now + 600_000),
-        });
+    const issued = await Otp.issue({
+      phoneHash,
+      codeHash: hash(phoneHash + ":" + code),
+      sentAt: now,
+      expiresAt: new Date(+now + 600_000),
+      cooldownBefore: new Date(+now - 60_000),
+    });
+    if (issued) {
+      const user = await UserAccount.findOne({ phone, isActive: { $ne: false } }).select(
+        "+passwordHash"
+      );
+      if (user?.passwordHash) {
+        const [membership] = await activeWorkspaces(user._id);
+        if (membership)
+          await enqueue({
+            workspaceId: membership.workspace.workspaceId,
+            channel: "whatsapp",
+            toPhone: phone.length === 10 ? "+91" + phone : phone,
+            ...buildPasswordOtp(code, membership.workspace),
+            sensitive: true,
+            deliveryExpiresAt: new Date(+now + 600_000),
+          });
+      }
     }
-  } catch (err) {
-    if (err.code !== 11000) logger.error({ msg: "Password recovery request could not be queued" });
+  } catch {
+    logger.error({ msg: "Password recovery request could not be queued" });
   }
   res
     .status(202)
@@ -60,19 +55,9 @@ async function request(req, res) {
 async function verify(req, res) {
   const { phone, code, password } = req.body;
   const phoneHash = hash("otp-phone:" + phone);
-  const filter = { phoneHash, expiresAt: { $gt: new Date() }, attempts: { $lt: 5 }, usedAt: null };
-  const challenge = await Otp.findOneAndUpdate(filter, { $inc: { attempts: 1 } }, { new: true });
+  const challenge = await Otp.recordAttempt(phoneHash, new Date());
   if (!challenge) fail(400, "Invalid or expired code");
-  const claimed = await Otp.findOneAndUpdate(
-    {
-      _id: challenge._id,
-      sentAt: challenge.sentAt,
-      expiresAt: { $gt: new Date() },
-      usedAt: null,
-      codeHash: hash(phoneHash + ":" + code),
-    },
-    { $set: { usedAt: new Date() } }
-  );
+  const claimed = await Otp.claim(challenge, hash(phoneHash + ":" + code), new Date());
   if (!claimed) fail(400, "Invalid or expired code");
   const user = await UserAccount.findOne({ phone, isActive: { $ne: false } }).select(
     "+passwordHash"
