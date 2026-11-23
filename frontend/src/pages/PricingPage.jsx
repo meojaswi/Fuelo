@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { choosePlan } from "../api/billing.api";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import MotionWord from "../components/shared/MotionWord";
 import HighlightPill from "../components/shared/HighlightPill";
@@ -27,6 +29,8 @@ const PLANS = [
     cap: "1,500 transactions / mo",
     features: [
       "Everything in Starter",
+      "5 logins, up to 2 workspaces",
+      "Sales reports",
       "PDF receipts",
       "Credit customer tracking",
       "SMS fallback on failure",
@@ -41,6 +45,8 @@ const PLANS = [
     cap: "Unlimited transactions",
     features: [
       "Everything in Growth",
+      "15 logins, up to 5 workspaces",
+      "CSV exports",
       "Multiple item verticals",
       "Priority support",
       "Custom message templates",
@@ -53,7 +59,25 @@ function formatINR(n) {
 }
 
 export default function PricingPage() {
+  const { user, token } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
   const [cycle, setCycle] = useState("monthly"); // "monthly" | "yearly"
+
+  async function startCheckout(plan) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      setFeedback({ message: await choosePlan(plan, cycle) });
+    } catch (err) {
+      setFeedback({
+        message: err.response?.data?.error || err.message || "Could not start checkout.",
+        error: true,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-fuelo-surface text-white">
@@ -83,7 +107,7 @@ export default function PricingPage() {
             </h1>
             <p className="mt-4 animate-fade-up text-sm leading-6 text-white/45 [animation-delay:240ms]">
               Every plan includes <HighlightPill>WhatsApp receipts</HighlightPill>,{" "}
-              <HighlightPill>credit tracking</HighlightPill> and{" "}
+              <HighlightPill>receipt links</HighlightPill> and{" "}
               <HighlightPill>daily summaries.</HighlightPill> Pick the transaction volume that fits
               your counter.
             </p>
@@ -152,18 +176,37 @@ export default function PricingPage() {
                       ))}
                     </ul>
 
-                    <Link
-                      to="/signup"
-                      className="mt-6 block w-full rounded-none border border-fuelo-coral/40 px-2.5 py-1.5 text-center text-sm font-medium text-fuelo-ink transition hover:border-fuelo-coral hover:bg-fuelo-coral/10"
-                    >
-                      Get started
-                    </Link>
+                    {token ? (
+                      <button
+                        type="button"
+                        disabled={busy || !user?.permissions?.includes("billing:manage")}
+                        onClick={() => startCheckout(plan.name)}
+                        className="mt-6 w-full border border-fuelo-coral/40 px-2.5 py-1.5 text-sm font-medium text-fuelo-ink hover:bg-fuelo-coral/10 disabled:opacity-50"
+                      >
+                        Choose {plan.name}
+                      </button>
+                    ) : (
+                      <Link
+                        to="/signup"
+                        className="mt-6 block w-full border border-fuelo-coral/40 px-2.5 py-1.5 text-center text-sm font-medium text-fuelo-ink"
+                      >
+                        Get started
+                      </Link>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
 
+          {feedback && (
+            <p
+              role={feedback.error ? "alert" : "status"}
+              className="mx-auto mt-6 max-w-lg text-center text-sm text-white"
+            >
+              {feedback.message}
+            </p>
+          )}
           <p className="mx-auto mt-10 max-w-lg animate-fade-up text-center font-mono text-[11px] text-white/30 [animation-delay:700ms]">
             Prices exclude GST. Message costs beyond your plan&apos;s cap are billed at actuals.
           </p>

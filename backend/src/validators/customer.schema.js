@@ -1,3 +1,4 @@
+const { normalizeVehicle } = require("../utils/vehicleNumber");
 const { z } = require("zod");
 const { MAX_MONEY, roundMoney } = require("../utils/money");
 
@@ -10,6 +11,20 @@ const createCustomerSchema = z.object({
 const updateCustomerSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
+    creditDays: z.number().int().min(0).max(3650).nullable().optional(),
+    vehicles: z
+      .array(
+        z.object({
+          number: z.string().trim().min(1).max(32).transform(normalizeVehicle),
+          label: z.string().trim().max(100).optional(),
+        })
+      )
+      .max(100)
+      .refine(
+        (rows) => new Set(rows.map(({ number }) => number)).size === rows.length,
+        "Vehicle numbers must be unique"
+      )
+      .optional(),
     creditLimit: z
       .number()
       .nonnegative()

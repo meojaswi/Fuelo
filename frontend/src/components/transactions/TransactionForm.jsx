@@ -11,7 +11,7 @@ import Button from "../shared/Button";
 import PhoneInput from "../shared/PhoneInput";
 import Input from "../shared/Input";
 import { useAuth } from "../../context/AuthContext";
-import { fetchInventory } from "../../api/inventory.api";
+import { fetchPrices } from "../../api/inventory.api";
 import { formatCurrency } from "../../utils/formatters";
 import { createTransaction } from "../../api/transactions.api";
 export default function TransactionForm({ onSaved }) {
@@ -22,22 +22,28 @@ export default function TransactionForm({ onSaved }) {
     customerName: "",
     customerPhone: "",
     itemType: options[0] || "",
-    unit: user?.verticalType === "fuel" ? "litres" : "",
+    unit:
+      user?.config?.itemUnits?.[options[0]] ??
+      user?.verticalLabels?.unit ??
+      (user?.verticalType === "fuel" ? "litres" : ""),
     quantity: "",
     amount: null,
     paymentMode: "Cash",
     upiReference: "",
     notes: "",
+    vehicleNumber: "",
   });
   const [preview, setPreview] = useState(false),
     [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [override, setOverride] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const vehicles = selectedCustomer?.isCreditCustomer ? (selectedCustomer.vehicles ?? []) : [];
   const workspaceId = user?.workspaceId;
   const [inventoryResult, setInventoryResult] = useState(null);
   useEffect(() => {
     let active = true;
-    fetchInventory()
+    fetchPrices()
       .then((items) => {
         if (active) setInventoryResult({ workspaceId, items });
       })
@@ -64,7 +70,14 @@ export default function TransactionForm({ onSaved }) {
     amount !== "" &&
     Math.round(Math.abs(Number(amount) - expectedAmount) * 100) > 100;
   const u = (key, value) => {
-    setF((previous) => ({ ...previous, [key]: value }));
+    setF((previous) => ({
+      ...previous,
+      [key]: value,
+      ...(key === "itemType" && {
+        unit: user?.config?.itemUnits?.[value] ?? user?.verticalLabels?.unit ?? previous.unit,
+      }),
+    }));
+    if (["customerName", "customerPhone"].includes(key)) setSelectedCustomer(null);
     setOverride(false);
     setSaveError(null);
   };
@@ -80,7 +93,8 @@ export default function TransactionForm({ onSaved }) {
         quantity: Number(f.quantity),
         amount: Number(amount),
         unit,
-        override: f.paymentMode === "Credit" && override,
+        override:
+          f.paymentMode === "Credit" && override && user?.permissions?.includes("credit:payment"),
       });
       onSaved?.(d);
     } catch (e) {
@@ -95,7 +109,22 @@ export default function TransactionForm({ onSaved }) {
   const msg = `Hi ${f.customerName || "Customer"}, your ${f.itemType} transaction of ₹${amount || 0} has been recorded. Payment: ${f.paymentMode}. Thank you.`;
   return (
     <form onSubmit={submit} className="space-y-6">
-      <CustomerNameInput value={f.customerName} onChange={(v) => u("customerName", v)} />
+      <CustomerNameInput
+        value={f.customerName}
+        onChange={(v) => u("customerName", v)}
+        onSelect={(customer) => {
+          setSelectedCustomer(customer);
+          const phone = customer.phone.replace(/^\+91(?=\d{10}$)/, "");
+          setF((previous) => ({
+            ...previous,
+            customerName: customer.name,
+            customerPhone: /^\d{10}$/.test(phone) ? phone : previous.customerPhone,
+            vehicleNumber: "",
+          }));
+          setOverride(false);
+          setSaveError(null);
+        }}
+      />
       <PhoneInput
         value={f.customerPhone}
         onChange={(e) => u("customerPhone", e.target.value)}
@@ -150,15 +179,49 @@ export default function TransactionForm({ onSaved }) {
           {saveError.message}
         </p>
       )}
-      {f.paymentMode === "Credit" && saveError?.creditLimit && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={override}
-            onChange={(e) => setOverride(e.target.checked)}
+      {f.paymentMode === "Credit" &&
+        saveError?.creditLimit &&
+        user?.permissions?.includes("credit:payment") && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={override}
+              onChange={(e) => setOverride(e.target.checked)}
+            />
+            Allow this sale to exceed the credit limit
+          </label>
+        )}
+      {user?.verticalFeatures?.vehicleNumber && (
+        <div className="space-y-2">
+          {f.paymentMode === "Credit" && vehicles.length > 0 && (
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-slate-600">Fleet vehicle</span>
+              <select
+                className="control w-full px-3 py-2"
+                value={
+                  vehicles.some((vehicle) => vehicle.number === f.vehicleNumber)
+                    ? f.vehicleNumber
+                    : ""
+                }
+                onChange={(e) => u("vehicleNumber", e.target.value)}
+              >
+                <option value="">Enter a vehicle number</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.number} value={vehicle.number}>
+                    {vehicle.number}
+                    {vehicle.label ? ` · ${vehicle.label}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <Input
+            label="Vehicle number"
+            value={f.vehicleNumber}
+            onChange={(e) => u("vehicleNumber", e.target.value)}
+            maxLength={32}
           />
-          Allow this sale to exceed the credit limit
-        </label>
+        </div>
       )}
       <UpiReferenceInput
         visible={f.paymentMode === "UPI"}

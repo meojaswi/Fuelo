@@ -12,8 +12,13 @@ import {
   MessageSquare,
   Wallet,
   Package,
+  ClipboardList,
+  BarChart3,
+  Clock3,
+  Droplets,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import WorkspaceBillingNotice from "../components/billing/WorkspaceBillingNotice";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";
 import QuickAddFAB from "../components/shared/QuickAddFAB";
@@ -22,15 +27,55 @@ import NewTransactionPage from "../pages/NewTransactionPage";
 import TransactionListPage from "../pages/TransactionListPage";
 import TransactionDetailPage from "../pages/TransactionDetailPage";
 import MessagesPage from "../pages/MessagesPage";
-import MembersPage from "../pages/MembersPage";
 import WorkspacesPage from "../pages/WorkspacesPage";
 import SettingsPage from "../pages/SettingsPage";
 
+const pumpNav = [
+  ["/pump/shifts", "Shifts", Clock3, "shifts", "shifts:operate"],
+  ["/pump/tanks", "Tanks & Deliveries", Droplets, "tanks", "tanks:dip"],
+  ["/pump/report", "Pump Report", BarChart3, "pumpReports", "reports:read"],
+];
+
+const routePermissions = {
+  "/": "dashboard:read",
+  "/transactions/new": "transactions:create",
+  "/transactions": "transactions:read",
+  "/transactions/:id": "transactions:read",
+  "/members": "members:read",
+  "/inventory": "inventory:read",
+  "/credit": "credit:read",
+  "/credit/:id": "credit:read",
+  "/messages": "notifications:manage",
+  "/workspaces": "account:manage",
+  "/settings": "account:manage",
+  "/activity": "audit:read",
+  "/settings/billing": "billing:manage",
+  "/reports": "reports:read",
+};
+
+const PumpShiftsPage = lazy(() => import("../pages/PumpShiftsPage"));
+const PumpTanksPage = lazy(() => import("../pages/PumpTanksPage"));
+const PumpReportPage = lazy(() => import("../pages/PumpReportPage"));
+const ReportsPage = lazy(() => import("../pages/ReportsPage"));
+const BillingPage = lazy(() => import("../pages/BillingPage"));
+const ActivityPage = lazy(() => import("../pages/ActivityPage"));
+const MembersPage = lazy(() => import("../pages/MembersPage"));
 const InventoryPage = lazy(() => import("../pages/InventoryPage"));
 const CreditPage = lazy(() => import("../pages/CreditPage"));
 
 export default function AppShell() {
   const { user, workspaces, logout } = useAuth();
+  const can = (permission) => user?.permissions?.includes(permission);
+  const pumpItems = pumpNav.filter(
+    ([path, , , flag, permission]) =>
+      user?.verticalFeatures?.[flag] &&
+      can(permission) &&
+      (path !== "/pump/tanks" || can("tanks:manage") || user?.config?.attendantsCanDip)
+  );
+  const canVisit = (path) =>
+    path.startsWith("/pump/") ? pumpItems.some(([to]) => to === path) : can(routePermissions[path]);
+  const access = (path, element) =>
+    canVisit(path) ? element : <p role="alert">You do not have access to this page.</p>;
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const workspace =
     user?.businessName || user?.workspace?.name || user?.workspaceName || "Primary workspace";
@@ -138,10 +183,19 @@ export default function AppShell() {
             <Item to="/inventory" icon={Package} label="Inventory" />
             <Item to="/credit" icon={Wallet} label="Credit / Udhaar" />
           </nav>
+          {pumpItems.length > 0 && (
+            <nav aria-label="Pump operations" className="mt-4 space-y-1">
+              {pumpItems.map(([path, label, Icon]) => (
+                <Item key={path} to={path} icon={Icon} label={label} allowed />
+              ))}
+            </nav>
+          )}
           <p className="mono-label mt-7 px-2">Manage</p>
           <nav className="mt-2 space-y-1">
             <Item to="/members" icon={Users} label="Members" />
             <Item to="/messages" icon={MessageSquare} label="Messages" />
+            <Item to="/reports" icon={BarChart3} label="Reports" />
+            <Item to="/activity" icon={ClipboardList} label="Activity log" />
             <Item to="/settings" icon={Settings} label="Settings" />
           </nav>
         </div>
@@ -155,19 +209,71 @@ export default function AppShell() {
       <main className="md:pl-64">
         <TopBar />
         <div className="mx-auto max-w-[1400px] p-4 pb-24 md:p-8">
+          <WorkspaceBillingNotice />
+          {pumpItems.length > 0 && (
+            <nav
+              aria-label="Mobile pump operations"
+              className="mb-4 flex gap-2 overflow-x-auto md:hidden"
+            >
+              {pumpItems.map(([path, label]) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  className={({ isActive }) =>
+                    `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? "bg-fuelo-ink text-white" : "bg-slate-100 text-slate-700"}`
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          )}
           <Suspense fallback={<p className="text-sm text-slate-500">Loading page…</p>}>
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/transactions/new" element={<NewTransactionPage />} />
-              <Route path="/transactions" element={<TransactionListPage />} />
-              <Route path="/transactions/:id" element={<TransactionDetailPage />} />
-              <Route path="/members" element={<MembersPage />} />
-              <Route path="/inventory" element={<InventoryPage key={user?.workspaceId} />} />
-              <Route path="/credit" element={<CreditPage />} />
-              <Route path="/credit/:id" element={<CreditPage />} />
-              <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/workspaces" element={<WorkspacesPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/" element={access("/", <DashboardPage />)} />
+              <Route
+                path="/pump/shifts"
+                element={access("/pump/shifts", <PumpShiftsPage key={user?.workspaceId} />)}
+              />
+              <Route
+                path="/pump/tanks"
+                element={access("/pump/tanks", <PumpTanksPage key={user?.workspaceId} />)}
+              />
+              <Route
+                path="/pump/report"
+                element={access("/pump/report", <PumpReportPage key={user?.workspaceId} />)}
+              />
+              <Route
+                path="/transactions/new"
+                element={access("/transactions/new", <NewTransactionPage />)}
+              />
+              <Route
+                path="/transactions"
+                element={access("/transactions", <TransactionListPage />)}
+              />
+              <Route
+                path="/transactions/:id"
+                element={access("/transactions/:id", <TransactionDetailPage />)}
+              />
+              <Route path="/members" element={access("/members", <MembersPage />)} />
+              <Route
+                path="/inventory"
+                element={access("/inventory", <InventoryPage key={user?.workspaceId} />)}
+              />
+              <Route path="/credit" element={access("/credit", <CreditPage />)} />
+              <Route path="/credit/:id" element={access("/credit/:id", <CreditPage />)} />
+              <Route path="/messages" element={access("/messages", <MessagesPage />)} />
+              <Route path="/workspaces" element={access("/workspaces", <WorkspacesPage />)} />
+              <Route
+                path="/reports"
+                element={access("/reports", <ReportsPage key={user?.workspaceId} />)}
+              />
+              <Route path="/activity" element={access("/activity", <ActivityPage />)} />
+              <Route
+                path="/settings/billing"
+                element={access("/settings/billing", <BillingPage />)}
+              />
+              <Route path="/settings" element={access("/settings", <SettingsPage />)} />
             </Routes>
           </Suspense>
         </div>
@@ -177,7 +283,9 @@ export default function AppShell() {
     </div>
   );
 }
-function Item({ to, icon: Icon, label }) {
+function Item({ to, icon: Icon, label, allowed }) {
+  const { user } = useAuth();
+  if (!allowed && !user?.permissions?.includes(routePermissions[to])) return null;
   return (
     <NavLink
       to={to}

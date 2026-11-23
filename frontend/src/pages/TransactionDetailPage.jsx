@@ -1,3 +1,4 @@
+import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTransaction } from "../hooks/useTransactions";
@@ -12,6 +13,8 @@ import { getReceiptPdf, voidTransaction } from "../api/transactions.api";
 import { formatCurrency } from "../utils/formatters";
 import { retryNotification } from "../api/notifications.api";
 export default function TransactionDetailPage() {
+  const { user } = useAuth();
+  const can = (permission) => user?.permissions?.includes(permission);
   const { id } = useParams(),
     { transaction: t, loading } = useTransaction(id),
     [busy, setBusy] = useState(false),
@@ -74,36 +77,45 @@ export default function TransactionDetailPage() {
         </p>
       )}
       <TransactionInfoCard transaction={t} />
+      {t.vehicleNumber && (
+        <p className="text-sm text-slate-500">
+          Vehicle {t.vehicleNumber}
+          {t.vehicleNumberWarning && " · Unusual registration format"}
+        </p>
+      )}
+      {t.recordedBy && <p className="text-sm text-slate-500">Recorded by {t.recordedBy}</p>}
       {t.priceMismatch && (
         <p className="text-sm text-amber-700">
           Amount differs from list price ({formatCurrency(t.expectedAmount)}).
         </p>
       )}
-      {t.customerId && (
+      {t.customerId && can("credit:read") && (
         <Link className="text-sm font-semibold text-fuelo-coral" to={`/credit/${t.customerId}`}>
           View customer ledger
         </Link>
       )}
-      <div className="grid gap-5 sm:grid-cols-2">
-        <NotificationStatusCard status={t.notificationStatus} />
-        <div className="panel p-5">
-          <p className="mono-label">Delivery action</p>
-          <h3 className="mt-1 font-bold">Message delivery</h3>
-          <div className="mt-4">
-            <RetryButton
-              visible={t.notificationStatus === "failed"}
-              onRetry={retry}
-              loading={busy}
-            />
+      {can("notifications:manage") && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <NotificationStatusCard status={t.notificationStatus} />
+          <div className="panel p-5">
+            <p className="mono-label">Delivery action</p>
+            <h3 className="mt-1 font-bold">Message delivery</h3>
+            <div className="mt-4">
+              <RetryButton
+                visible={t.notificationStatus === "failed"}
+                onRetry={retry}
+                loading={busy}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <button type="button" onClick={downloadReceipt} className="font-semibold text-fuelo-coral">
         Download PDF receipt
       </button>
       {pdfError && <p role="alert">{pdfError}</p>}
       <ShareLinkSection transactionId={id} />
-      {status.status === "active" && (
+      {status.status === "active" && can("transactions:void") && (
         <Button type="button" variant="secondary" onClick={() => setShowVoid(true)}>
           Void transaction
         </Button>

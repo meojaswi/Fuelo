@@ -8,6 +8,7 @@ const createTransactionSchema = z.object({
   quantity: z.number().finite().positive(),
   unit: z.string().min(1),
   amount: z.number().min(0.005).max(MAX_MONEY).transform(roundMoney),
+  vehicleNumber: z.string().trim().max(32).optional(),
   paymentMode: z.enum(["cash", "upi", "credit"]),
   upiReference: z.string().optional(),
   notes: z.string().optional(),

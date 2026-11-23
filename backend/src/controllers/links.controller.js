@@ -1,4 +1,5 @@
-const Dealer = require("../models/dealer.model");
+const { transactionScope } = require("../utils/transactionScope");
+const Workspace = require("../models/workspace.model");
 const Transaction = require("../models/transaction.model");
 const linkTokenService = require("../services/linkToken.service");
 
@@ -7,7 +8,7 @@ async function create(req, res) {
   const transactionId = req.params.id || req.body?.transactionId;
 
   if (!transactionId) return res.status(400).json({ error: "Transaction ID is required" });
-  const tx = await Transaction.findOne({ _id: transactionId, workspaceId: req.workspaceId });
+  const tx = await Transaction.findOne({ _id: transactionId, ...transactionScope(req) });
   if (!tx) return res.status(404).json({ error: "Transaction not found" });
 
   const { token, expiresAt } = await linkTokenService.createShareLink({
@@ -33,8 +34,8 @@ async function resolve(req, res) {
 
   const { workspaceId, transactionId } = result.link;
   const [transaction, dealer] = await Promise.all([
-    Transaction.findOne({ _id: transactionId, workspaceId }),
-    Dealer.findOne({ workspaceId }).select("businessName"),
+    Transaction.findOne({ _id: transactionId, workspaceId }).select("-createdBy -voidedBy"),
+    Workspace.findOne({ workspaceId }).select("businessName"),
   ]);
   if (!transaction || !dealer) {
     return res.status(404).json({ code: "NOT_FOUND", error: "Receipt not found" });

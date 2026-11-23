@@ -1,4 +1,14 @@
-import client from "./client";
+import client, { refreshStorageKey } from "./client";
+
+export function logoutRequest(refreshToken) {
+  return client.post("/auth/logout", { refreshToken });
+}
+export function requestPasswordCode(phone) {
+  return client.post("/auth/otp/request", { phone });
+}
+export function verifyPasswordCode(body) {
+  return client.post("/auth/otp/verify", body);
+}
 
 export async function signupRequest(payload) {
   const { data } = await client.post("/auth/signup", payload);
@@ -11,7 +21,10 @@ export async function loginRequest(payload) {
 }
 
 export async function switchWorkspaceRequest(workspaceId) {
-  const { data } = await client.post("/auth/switch", { workspaceId });
+  const { data } = await client.post("/auth/switch", {
+    workspaceId,
+    refreshToken: localStorage.getItem(refreshStorageKey),
+  });
   return data;
 }
 

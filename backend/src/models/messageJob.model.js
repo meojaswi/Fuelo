@@ -13,6 +13,10 @@ const messageJobSchema = new mongoose.Schema(
     channel: { type: String, enum: ["whatsapp", "sms"], required: true },
     toPhone: { type: String, required: true },
     body: { type: String, required: true },
+    sensitive: { type: Boolean, default: false },
+    deliveryExpiresAt: Date,
+    contentSid: String,
+    contentVariables: mongoose.Schema.Types.Mixed,
 
     status: {
       type: String,

@@ -120,5 +120,9 @@ dist
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
 
 scripts/
+!backend/scripts/
+backend/scripts/*
+!backend/scripts/migrateToMemberships.js
+!backend/scripts/seedPlans.js
 
 Data

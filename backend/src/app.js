@@ -11,6 +11,12 @@ const { errorHandler } = require("./middleware/errorHandler.middleware");
 const linksController = require("./controllers/links.controller");
 const billingController = require("./controllers/billing.controller");
 
+const nozzlesRoutes = require("./routes/nozzles.routes");
+const shiftsRoutes = require("./routes/shifts.routes");
+const tanksRoutes = require("./routes/tanks.routes");
+const deliveriesRoutes = require("./routes/deliveries.routes");
+const auditRoutes = require("./routes/audit.routes");
+const membersRoutes = require("./routes/members.routes");
 const authRoutes = require("./routes/auth.routes");
 const transactionsRoutes = require("./routes/transactions.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
@@ -30,6 +36,7 @@ const authPaths = ["/auth/login", "/auth/signup"];
 app.use(helmet());
 app.use(
   cors({
+    exposedHeaders: ["X-Fuelo-Usage-Warning"],
     origin: (origin, callback) => callback(null, !origin || env.corsOrigins.includes(origin)),
   })
 );
@@ -76,6 +83,12 @@ app.use(
 app.get(["/health", "/api/health"], (req, res) => res.json({ ok: true }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/members", membersRoutes);
+app.use("/api/audit", auditRoutes);
+app.use("/api/nozzles", nozzlesRoutes);
+app.use("/api/shifts", shiftsRoutes);
+app.use("/api/tanks", tanksRoutes);
+app.use("/api/deliveries", deliveriesRoutes);
 app.use("/api/transactions", transactionsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use(["/api/links", "/links"], linksRoutes);

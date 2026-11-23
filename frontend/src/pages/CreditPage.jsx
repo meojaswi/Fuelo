@@ -5,6 +5,8 @@ import {
   getCustomerLedger,
   getOutstanding,
   recordCustomerPayment,
+  sendDuesReminder,
+  updateCustomer,
 } from "../api/customers.api";
 import Button from "../components/shared/Button";
 import EmptyState from "../components/shared/EmptyState";
@@ -34,11 +36,13 @@ export default function CreditPage() {
 }
 
 function Outstanding() {
+  const [days, setDays] = useState("");
+  const [filter, setFilter] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    getOutstanding()
+    getOutstanding(filter === "" ? undefined : Number(filter))
       .then((data) => {
         if (active) setResult(data);
       })
@@ -48,7 +52,7 @@ function Outstanding() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [filter]);
 
   return (
     <section className="space-y-6">
@@ -61,6 +65,25 @@ function Outstanding() {
           {error}
         </p>
       )}
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError("");
+          setFilter(days);
+        }}
+      >
+        <Input
+          label="Minimum days overdue"
+          type="number"
+          min="0"
+          max="99999"
+          step="1"
+          value={days}
+          onChange={(e) => setDays(e.target.value)}
+        />
+        <Button variant="secondary">Filter</Button>
+      </form>
       {!result && !error && <p className="text-sm text-slate-500">Loading balances…</p>}
       {result && (
         <>
@@ -79,6 +102,12 @@ function Outstanding() {
                     <div>
                       <p className="font-semibold">{customer.name}</p>
                       <p className="text-xs text-slate-500">{customer.phone}</p>
+                      {customer.oldestUnpaidSaleDays != null && (
+                        <p className="text-xs text-slate-500">
+                          Oldest unpaid sale: {customer.oldestUnpaidSaleDays} days · Overdue:{" "}
+                          {customer.daysOverdue} days
+                        </p>
+                      )}
                       <p className="mt-1 text-xs text-slate-500">
                         {customer.lastPaymentAt
                           ? `Last payment ${formatDate(customer.lastPaymentAt, dateOptions)}`
@@ -105,6 +134,9 @@ function Outstanding() {
 }
 
 function CustomerLedger({ id }) {
+  const { user } = useAuth();
+  const [notice, setNotice] = useState(null);
+  const [reminding, setReminding] = useState(false);
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState(null);
@@ -128,6 +160,21 @@ function CustomerLedger({ id }) {
   const customer = current?.customer;
   const ledger = current?.ledger;
   const balance = customer?.creditBalance ?? 0;
+  async function remind() {
+    setReminding(true);
+    setNotice(null);
+    try {
+      await sendDuesReminder(id);
+      setNotice({ text: "WhatsApp reminder queued." });
+    } catch (err) {
+      setNotice({
+        error: true,
+        text: err.response?.data?.error || "Could not queue the reminder.",
+      });
+    } finally {
+      setReminding(false);
+    }
+  }
   return (
     <section className="space-y-6">
       <Link className="text-sm font-semibold text-fuelo-coral" to="/credit">
@@ -153,12 +200,30 @@ function CustomerLedger({ id }) {
               </p>
               <p className="text-xl font-bold">{formatCurrency(Math.abs(balance))}</p>
             </div>
+            {balance > 0 &&
+              user?.verticalFeatures?.vehicleNumber &&
+              user?.permissions?.includes("credit:reminder") && (
+                <Button type="button" variant="secondary" loading={reminding} onClick={remind}>
+                  Send dues reminder
+                </Button>
+              )}
             {balance > 0 && (
               <Button type="button" onClick={() => setShowPayment(true)}>
                 Record payment
               </Button>
             )}
           </div>
+          {notice && (
+            <p
+              role={notice.error ? "alert" : "status"}
+              className={notice.error ? "text-sm text-red-600" : "text-sm text-emerald-700"}
+            >
+              {notice.text}
+            </p>
+          )}
+          {user?.permissions?.includes("customers:manage") && (
+            <CreditTerms key={customer._id} customer={customer} />
+          )}
           <div>
             <h3 className="mb-3 font-bold">Ledger</h3>
             {ledger.entries.length ? (
@@ -218,6 +283,46 @@ function CustomerLedger({ id }) {
         </>
       )}
     </section>
+  );
+}
+
+function CreditTerms({ customer }) {
+  const [days, setDays] = useState(customer.creditDays ?? "");
+  const [message, setMessage] = useState(null);
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      await updateCustomer(customer._id, { creditDays: days === "" ? null : Number(days) });
+      setMessage({ text: "Credit terms saved." });
+    } catch (err) {
+      setMessage({ error: true, text: err.response?.data?.error || "Could not save terms." });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form onSubmit={submit} className="panel flex flex-wrap items-end gap-3 p-4">
+      <Input
+        label="Credit terms (days)"
+        type="number"
+        min="0"
+        max="3650"
+        step="1"
+        value={days}
+        onChange={(e) => setDays(e.target.value)}
+      />
+      <Button variant="secondary" loading={busy}>
+        Save terms
+      </Button>
+      {message && (
+        <p role={message.error ? "alert" : "status"} className="text-sm">
+          {message.text}
+        </p>
+      )}
+    </form>
   );
 }
 

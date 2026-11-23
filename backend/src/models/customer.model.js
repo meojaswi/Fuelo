@@ -8,6 +8,9 @@ const customerSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     isCreditCustomer: { type: Boolean, default: false },
     creditBalance: { type: Number, default: 0 },
+    vehicles: [{ _id: false, number: { type: String, required: true }, label: String }],
+    creditDays: { type: Number, default: null },
+    lastReminderAt: Date,
     creditLimit: { type: Number, default: null, min: 0 },
   },
   { timestamps: true }

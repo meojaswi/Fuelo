@@ -7,10 +7,11 @@ async function getToday(req, res) {
   const date = istDateString();
   const { startUTC, endUTC } = istDayBoundsUTC(date);
   const filter = { workspaceId: req.workspaceId, createdAt: { $gte: startUTC, $lt: endUTC } };
+  const own = req.user.role === "attendant" ? req.user.userId : null;
   const [rows, sent, failed] = await Promise.all([
-    dashboardService.getDailySummary(req.workspaceId, date),
-    Notification.countDocuments({ ...filter, status: "sent" }),
-    Notification.countDocuments({ ...filter, status: "failed" }),
+    dashboardService.getDailySummary(req.workspaceId, date, own),
+    own ? 0 : Notification.countDocuments({ ...filter, status: "sent" }),
+    own ? 0 : Notification.countDocuments({ ...filter, status: "failed" }),
   ]);
   const items = rows.map((row) => ({
     ...row,

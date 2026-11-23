@@ -17,7 +17,7 @@ const schema = new mongoose.Schema(
     paymentMode: { type: String, enum: ["cash", "upi", "credit"] },
     upiReference: String,
     note: String,
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Dealer", required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount", required: true },
     balanceAfter: { type: Number, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

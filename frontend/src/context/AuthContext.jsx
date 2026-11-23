@@ -1,5 +1,11 @@
-import { createContext, useContext, useState } from "react";
-import { loginRequest, signupRequest } from "../api/auth.api";
+import { createContext, useContext, useEffect, useState } from "react";
+import client, {
+  clearSession,
+  persistSession,
+  refreshStorageKey,
+  sessionEvent,
+} from "../api/client";
+import { loginRequest, logoutRequest, signupRequest } from "../api/auth.api";
 
 const C = createContext(null);
 
@@ -17,7 +23,42 @@ export function AuthProvider({ children }) {
   const [workspaces, setWorkspaces] = useState(() => readSessionValue("fuelo_workspaces", []));
   const [loading, setLoading] = useState(false);
 
-  function updateSession({ token: nextToken, dealer, workspaces: nextWorkspaces }) {
+  useEffect(() => {
+    const sync = () => {
+      setToken(localStorage.getItem("fuelo_token"));
+      setUser(readSessionValue("fuelo_user", null));
+      setWorkspaces(readSessionValue("fuelo_workspaces", []));
+    };
+    window.addEventListener(sessionEvent, sync);
+    return () => window.removeEventListener(sessionEvent, sync);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    async function check() {
+      try {
+        const { data } = await client.get("/auth/session");
+        const current = readSessionValue("fuelo_user", null);
+        if (!active || current?.workspaceId !== data.dealer.workspaceId) return;
+        const merged = { ...current, ...data.dealer };
+        if (JSON.stringify(current) !== JSON.stringify(merged)) persistSession({ dealer: merged });
+      } catch {
+        /* The client handles revoked and expired sessions. */
+      }
+    }
+    check();
+    const timer = setInterval(check, 25_000);
+    window.addEventListener("focus", check);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", check);
+    };
+  }, [token]);
+
+  function updateSession({ token: nextToken, refreshToken, dealer, workspaces: nextWorkspaces }) {
+    if (refreshToken) localStorage.setItem(refreshStorageKey, refreshToken);
     if (nextToken) {
       localStorage.setItem("fuelo_token", nextToken);
       setToken(nextToken);
@@ -40,7 +81,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const session = await request(payload);
-      updateSession(session);
+      persistSession(session);
       return session;
     } finally {
       setLoading(false);
@@ -56,12 +97,9 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    localStorage.removeItem("fuelo_token");
-    localStorage.removeItem("fuelo_user");
-    localStorage.removeItem("fuelo_workspaces");
-    setToken(null);
-    setUser(null);
-    setWorkspaces([]);
+    const refreshToken = localStorage.getItem(refreshStorageKey);
+    if (refreshToken) logoutRequest(refreshToken).catch(() => {});
+    clearSession();
   }
 
   return (

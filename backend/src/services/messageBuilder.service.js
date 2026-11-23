@@ -1,27 +1,91 @@
-/**
- * Deterministic template strings — no LLM in v1 (see project decisions:
- * templated messaging outperforms generative for reliability/cost/speed
- * at this stage; AI messaging is a parked v2 idea).
- */
+const env = require("../config/env");
+const { getVertical } = require("../config/verticals");
 
-function buildTransactionReceipt(tx, businessName) {
-  return (
-    `${businessName}\n` +
-    `${tx.customerName}, aapka transaction record:\n` +
-    `${tx.itemType}: ${tx.quantity} ${tx.unit}\n` +
-    `Amount: ₹${tx.amount}\n` +
-    `Payment: ${tx.paymentMode.toUpperCase()}\n` +
-    `Dhanyawad!`
-  );
+function copy(workspace, template, values) {
+  const { messages } = getVertical(workspace?.verticalType);
+  return messages[workspace?.language === "en" ? "en" : "hi"][template](values);
 }
 
-function buildEndOfDaySummary({ workspaceName, date, lines, totalAmount }) {
-  const body = lines.map((l) => `${l.itemType}: ${l.quantity} ${l.unit}`).join("\n");
-  return `${workspaceName} — Daily Summary (${date})\n` + `${body}\n` + `Total: ₹${totalAmount}`;
+function buildTransactionReceipt(tx, workspace) {
+  return copy(workspace, "receipt", {
+    name: workspace.businessName,
+    customer: tx.customerName,
+    item: tx.itemType,
+    quantity: tx.quantity,
+    unit: tx.unit,
+    amount: tx.amount.toFixed(2),
+    payment: tx.paymentMode.toUpperCase(),
+    label: getVertical(workspace.verticalType).labels.item,
+  });
 }
 
-function buildPaymentReceipt({ businessName, amount, remainingBalance }) {
-  return `${businessName}\nPayment received: ₹${amount.toFixed(2)}\nRemaining balance: ₹${remainingBalance.toFixed(2)}\nDhanyawad!`;
+function buildEndOfDaySummary({ workspace, date, lines, totalAmount }) {
+  return copy(workspace, "eod", {
+    name: workspace.businessName,
+    date,
+    total: totalAmount.toFixed(2),
+    lines: lines.map((line) => `${line.itemType}: ${line.quantity} ${line.unit}`).join("\n"),
+  });
 }
 
-module.exports = { buildTransactionReceipt, buildEndOfDaySummary, buildPaymentReceipt };
+function buildPaymentReceipt({ workspace, amount, remainingBalance }) {
+  return copy(workspace, "payment", {
+    name: workspace.businessName,
+    amount: amount.toFixed(2),
+    balance: remainingBalance.toFixed(2),
+  });
+}
+
+function withContentTemplate(body, sid, variables) {
+  return { body, ...(sid && { contentSid: sid, contentVariables: variables }) };
+}
+
+function buildPasswordOtp(code, workspace) {
+  const sid =
+    (workspace?.language !== "en" && env.twilio.otpContentSidHi) || env.twilio.otpContentSid;
+  return withContentTemplate(copy(workspace, "otp", { code }), sid, { 1: code });
+}
+
+function buildInvite(workspace, url, code) {
+  const name = workspace.businessName;
+  const sid =
+    (workspace?.language !== "en" && env.twilio.inviteContentSidHi) || env.twilio.inviteContentSid;
+  return withContentTemplate(copy(workspace, "invite", { name, url }), sid, { 1: name, 2: code });
+}
+
+function buildReminder(workspace, customer) {
+  const values = {
+    name: workspace.businessName,
+    customer: customer.name,
+    amount: customer.creditBalance.toFixed(2),
+  };
+  const sid =
+    (workspace.language !== "en" && env.twilio.reminderContentSidHi) ||
+    env.twilio.reminderContentSid;
+  return withContentTemplate(copy(workspace, "reminder", values), sid, {
+    1: values.name,
+    2: values.customer,
+    3: values.amount,
+  });
+}
+
+function buildVarianceAlert(workspace, variance) {
+  const values = { name: workspace.businessName, amount: variance.toFixed(2) };
+  const sid =
+    (workspace.language !== "en" && env.twilio.varianceContentSidHi) ||
+    env.twilio.varianceContentSid;
+  return withContentTemplate(copy(workspace, "variance", values), sid, {
+    1: values.name,
+    2: values.amount,
+  });
+}
+
+module.exports = {
+  buildTransactionReceipt,
+  buildEndOfDaySummary,
+  buildPaymentReceipt,
+  buildPasswordOtp,
+  buildInvite,
+  buildReminder,
+  buildVarianceAlert,
+};

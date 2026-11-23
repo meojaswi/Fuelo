@@ -1,5 +1,10 @@
 import client from "./client";
 
+export async function fetchPrices() {
+  const { data } = await client.get("/inventory/prices");
+  return data;
+}
+
 export async function fetchInventory() {
   const { data } = await client.get("/inventory");
   return data;

@@ -7,14 +7,19 @@ async function hashPassword(plain) {
 }
 
 async function verifyPassword(plain, hash) {
-  return bcrypt.compare(plain, hash);
+  return hash ? bcrypt.compare(plain, hash) : false;
 }
 
-function signToken(dealer) {
+function signToken(workspace, user, membership) {
   return jwt.sign(
-    { dealerId: dealer._id.toString(), workspaceId: dealer.workspaceId },
+    {
+      userId: String(user._id),
+      workspaceId: workspace.workspaceId,
+      role: membership.role,
+      tokenVersion: user.tokenVersion,
+    },
     env.jwtSecret,
-    { expiresIn: env.jwtExpiresIn }
+    { expiresIn: "15m", algorithm: "HS256" }
   );
 }
 

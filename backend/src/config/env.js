@@ -21,6 +21,7 @@ if (!Number.isSafeInteger(trustProxyHops) || trustProxyHops < 0) {
 
 module.exports = {
   nodeEnv,
+  publicAppUrl: process.env.PUBLIC_APP_URL || "http://localhost:5173",
   trustProxyHops,
   corsOrigins: (
     process.env.CORS_ORIGINS ?? (nodeEnv === "development" ? "http://localhost:5173" : "")
@@ -33,13 +34,20 @@ module.exports = {
   mongoUri: process.env.MONGO_URI,
 
   jwtSecret: process.env.JWT_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10),
 
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
     whatsappFrom: process.env.TWILIO_WHATSAPP_FROM,
+    otpContentSidHi: process.env.TWILIO_WHATSAPP_OTP_CONTENT_SID_HI,
+    inviteContentSidHi: process.env.TWILIO_WHATSAPP_INVITE_CONTENT_SID_HI,
+    otpContentSid: process.env.TWILIO_WHATSAPP_OTP_CONTENT_SID,
+    inviteContentSid: process.env.TWILIO_WHATSAPP_INVITE_CONTENT_SID,
+    reminderContentSid: process.env.TWILIO_WHATSAPP_DUES_REMINDER_CONTENT_SID,
+    reminderContentSidHi: process.env.TWILIO_WHATSAPP_DUES_REMINDER_CONTENT_SID_HI,
+    varianceContentSid: process.env.TWILIO_WHATSAPP_SHIFT_VARIANCE_CONTENT_SID,
+    varianceContentSidHi: process.env.TWILIO_WHATSAPP_SHIFT_VARIANCE_CONTENT_SID_HI,
     smsFrom: process.env.TWILIO_SMS_FROM,
   },
 

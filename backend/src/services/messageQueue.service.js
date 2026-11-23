@@ -8,8 +8,31 @@ const logger = require("../utils/logger");
  * saved — decouples request latency from Twilio's response time and gives
  * retries + an audit trail for free.
  */
-async function enqueue({ workspaceId, transactionId, channel, toPhone, body }, { session } = {}) {
-  return new MessageJob({ workspaceId, transactionId, channel, toPhone, body }).save({ session });
+async function enqueue(
+  {
+    workspaceId,
+    transactionId,
+    channel,
+    toPhone,
+    body,
+    sensitive,
+    deliveryExpiresAt,
+    contentSid,
+    contentVariables,
+  },
+  { session } = {}
+) {
+  return new MessageJob({
+    workspaceId,
+    transactionId,
+    channel,
+    toPhone,
+    body,
+    sensitive,
+    deliveryExpiresAt,
+    contentSid,
+    contentVariables,
+  }).save({ session });
 }
 
 /**
@@ -25,11 +48,17 @@ async function drainPending(batchSize = 20) {
 
   for (const job of jobs) {
     job.attempts += 1;
-    const result = await twilioService.sendMessage({
-      channel: job.channel,
-      toPhone: job.toPhone,
-      body: job.body,
-    });
+    const expired = job.deliveryExpiresAt && job.deliveryExpiresAt <= new Date();
+    const result = expired
+      ? { ok: false, error: "Delivery expired" }
+      : await twilioService.sendMessage({
+          channel: job.channel,
+          toPhone: job.toPhone,
+          body: job.body,
+          sensitive: job.sensitive,
+          contentSid: job.contentSid,
+          contentVariables: job.contentVariables,
+        });
 
     if (result.ok) {
       job.status = "sent";
@@ -37,7 +66,11 @@ async function drainPending(batchSize = 20) {
       job.sentAt = new Date();
     } else {
       job.lastError = result.error;
-      if (job.attempts >= job.maxAttempts) job.status = "failed";
+      if (expired || job.attempts >= job.maxAttempts) job.status = "failed";
+    }
+    if (job.sensitive && job.status !== "pending") {
+      job.body = "Private WhatsApp message";
+      job.contentVariables = undefined;
     }
     await job.save();
 
@@ -48,7 +81,7 @@ async function drainPending(batchSize = 20) {
       channel: job.channel,
       status: job.status === "sent" ? "sent" : job.status === "failed" ? "failed" : "pending",
       retryCount: job.attempts,
-      messageBody: job.body,
+      messageBody: job.sensitive ? "Private WhatsApp message" : job.body,
     });
   }
 

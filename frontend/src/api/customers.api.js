@@ -4,9 +4,17 @@ export async function autocompleteCustomers(q) {
   return data;
 }
 
-export async function getOutstanding() {
-  const { data } = await client.get("/customers/outstanding");
+export async function getOutstanding(minDaysOverdue) {
+  const { data } = await client.get("/customers/outstanding", { params: { minDaysOverdue } });
   return data;
+}
+
+export async function sendDuesReminder(id) {
+  return (await client.post(`/customers/${id}/reminder`)).data;
+}
+
+export async function updateCustomer(id, body) {
+  return (await client.patch(`/customers/${id}`, body)).data;
 }
 
 export async function getCustomer(id) {

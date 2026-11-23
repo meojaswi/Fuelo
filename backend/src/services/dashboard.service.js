@@ -1,3 +1,4 @@
+const { Types } = require("mongoose");
 const Transaction = require("../models/transaction.model");
 const { istDayBoundsUTC } = require("../utils/datetime");
 
@@ -5,13 +6,14 @@ const { istDayBoundsUTC } = require("../utils/datetime");
  * Today's per-itemType totals for a workspace (Diesel/Petrol/CNG for a fuel
  * vertical, or whatever labels that workspace's config defines).
  */
-async function getDailySummary(workspaceId, date = new Date()) {
+async function getDailySummary(workspaceId, date = new Date(), userId) {
   const { startUTC, endUTC } = istDayBoundsUTC(date);
 
   const rows = await Transaction.aggregate([
     {
       $match: {
         workspaceId,
+        ...(userId ? { createdBy: new Types.ObjectId(userId) } : {}),
         status: "active",
         createdAt: { $gte: startUTC, $lt: endUTC },
       },

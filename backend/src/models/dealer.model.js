@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const { requireWorkspaceScope } = require("../middleware/workspaceScope.middleware");
 
-// A "dealer" is the login user for a workspace. workspace_id ties every other
-// collection to this — config-driven, not business-type-driven.
+// Deprecated legacy source for the membership migration and historical IDs.
 const dealerSchema = new mongoose.Schema(
   {
     workspaceId: { type: String, required: true, index: true, unique: true },

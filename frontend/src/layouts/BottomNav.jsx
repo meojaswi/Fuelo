@@ -1,16 +1,21 @@
 import { Home, List, Plus, MessageSquare, Wallet } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 export default function BottomNav() {
+  const { user } = useAuth();
   const links = [
     ["/", "Overview", Home],
     ["/transactions/new", "Add", Plus],
     ["/transactions", "History", List],
-    ["/credit", "Udhaar", Wallet],
-    ["/messages", "Messages", MessageSquare],
-  ];
+    ["/credit", "Udhaar", Wallet, "credit:read"],
+    ["/messages", "Messages", MessageSquare, "notifications:manage"],
+  ].filter(([, , , permission]) => !permission || user?.permissions?.includes(permission));
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden">
-      <div className="grid grid-cols-5">
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}
+      >
         {links.map(([to, I, Icon]) => (
           <NavLink
             key={to}

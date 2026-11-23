@@ -6,6 +6,7 @@ import Input from "../components/shared/Input";
 import Button from "../components/shared/Button";
 import MotionWord from "../components/shared/MotionWord";
 import HighlightPill from "../components/shared/HighlightPill";
+import ForgotPassword from "../components/auth/ForgotPassword";
 import LoginFooter from "../components/shared/LoginFooter";
 import LoginHeader from "../components/shared/LoginHeader";
 
@@ -24,6 +25,8 @@ export default function LoginPage() {
     [phone, setPhone] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState("");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [notice, setNotice] = useState("");
 
   async function submit(e) {
     e.preventDefault();
@@ -155,6 +158,11 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                {notice && (
+                  <p role="status" className="text-sm text-slate-600">
+                    {notice}
+                  </p>
+                )}
                 {error && (
                   <p className="animate-fade-up rounded-[8px] bg-red-50 p-3 text-sm text-red-600">
                     {error}
@@ -166,6 +174,13 @@ export default function LoginPage() {
                 >
                   Sign in
                 </Button>
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-fuelo-coral"
+                  onClick={() => setShowRecovery(true)}
+                >
+                  Forgot password?
+                </button>
               </form>
 
               <p className="relative mt-8 animate-fade-up text-center font-mono text-[10px] text-slate-400 [animation-delay:180ms]">
@@ -177,6 +192,15 @@ export default function LoginPage() {
       </main>
 
       <LoginFooter />
+      {showRecovery && (
+        <ForgotPassword
+          initialPhone={phone}
+          onClose={(message) => {
+            setShowRecovery(false);
+            if (message) setNotice(message);
+          }}
+        />
+      )}
     </div>
   );
 }

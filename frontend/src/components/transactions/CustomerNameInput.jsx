@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Input from "../shared/Input";
 import { useCustomerAutocomplete } from "../../hooks/useCustomerAutocomplete";
-export default function CustomerNameInput({ value, onChange }) {
+export default function CustomerNameInput({ value, onChange, onSelect }) {
   const [f, setF] = useState(false),
     s = useCustomerAutocomplete(value);
   return (
@@ -20,7 +20,11 @@ export default function CustomerNameInput({ value, onChange }) {
             <button
               type="button"
               key={c._id || c.id}
-              onClick={() => onChange(c.name)}
+              onClick={() => {
+                if (onSelect) onSelect(c);
+                else onChange(c.name);
+                setF(false);
+              }}
               className="block w-full rounded-[8px] px-3 py-2 text-left text-sm hover:bg-slate-50"
             >
               {c.name}

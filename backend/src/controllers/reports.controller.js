@@ -1,3 +1,5 @@
+const { assertCan } = require("../services/entitlements.service");
+const { csvLabel } = require("../utils/csv");
 const Transaction = require("../models/transaction.model");
 const { IST_TIME_ZONE, istDayBoundsUTC } = require("../utils/datetime");
 const { fail } = require("../services/atomic.service");
@@ -26,13 +28,6 @@ function reportBounds(from, to) {
   }
 }
 
-function csvLabel(value) {
-  const label = String(value ?? "");
-  // Protect spreadsheet users from formula execution in workspace-defined names.
-  const safe = /^[\s]*[=+\-@]|^[\t\r\n]/.test(label) ? "'" + label : label;
-  return '"' + safe.replace(/"/g, '""') + '"';
-}
-
 function csvRow(rowType, label, { quantity, amount, count }) {
   return [rowType, csvLabel(label), quantity, amount.toFixed(2), count].join(",");
 }
@@ -43,6 +38,7 @@ async function sales(req, res) {
     fail(400, "Use groupBy day, item or paymentMode and format json or csv");
   }
   const { startUTC, endUTC } = reportBounds(from, to);
+  await assertCan(req.workspaceId, format === "csv" ? "feature:csvExport" : "feature:reports");
   const [
     {
       groups: grouped,

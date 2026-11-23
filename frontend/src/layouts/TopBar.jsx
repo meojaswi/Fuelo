@@ -1,3 +1,4 @@
+import { useAuth } from "../context/AuthContext";
 import { ArrowLeft, Bell } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 const map = {
@@ -10,8 +11,15 @@ const map = {
   "/messages": "Messages",
   "/workspaces": "Workspaces",
   "/settings": "Settings",
+  "/activity": "Activity log",
+  "/reports": "Reports",
+  "/pump/shifts": "Shifts",
+  "/pump/tanks": "Tanks & Deliveries",
+  "/pump/report": "Pump Report",
+  "/settings/billing": "Billing",
 };
 export default function TopBar() {
+  const { user } = useAuth();
   const l = useLocation(),
     n = useNavigate(),
     back = l.pathname !== "/";
@@ -29,10 +37,17 @@ export default function TopBar() {
           <h1 className="font-bold">{title}</h1>
         </div>
       </div>
-      <button className="relative rounded-[8px] p-2.5 hover:bg-slate-100">
-        <Bell size={18} />
-        <i className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-fuelo-coral" />
-      </button>
+      <div className="flex items-center gap-3">
+        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold capitalize">
+          {user?.role}
+        </span>
+        {user?.permissions?.includes("notifications:manage") && (
+          <button className="relative rounded-[8px] p-2.5 hover:bg-slate-100">
+            <Bell size={18} />
+            <i className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-fuelo-coral" />
+          </button>
+        )}
+      </div>
     </header>
   );
 }

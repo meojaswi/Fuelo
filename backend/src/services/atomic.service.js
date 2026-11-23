@@ -22,7 +22,8 @@ async function standalone(workspaceId, work) {
         logger.error({
           msg: "Standalone write compensation failed",
           workspaceId,
-          err: rollbackError.message,
+          name: rollbackError.name,
+          code: Number.isInteger(rollbackError.code) ? rollbackError.code : undefined,
         });
         err.status = 500;
       }

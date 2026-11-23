@@ -6,7 +6,7 @@ const schema = new mongoose.Schema({
   itemType: { type: String, required: true },
   oldPrice: { type: Number, required: true },
   newPrice: { type: Number, required: true },
-  changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Dealer", required: true },
+  changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount", required: true },
   changedAt: { type: Date, required: true },
 });
 

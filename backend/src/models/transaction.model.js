@@ -21,10 +21,17 @@ const transactionSchema = new mongoose.Schema(
     upiReference: { type: String }, // manual RRN entry, v1 approach
 
     notes: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount" },
+    shiftId: { type: mongoose.Schema.Types.ObjectId, ref: "Shift" },
+    vehicleNumber: String,
+    vehicleNumberWarning: Boolean,
+    tankChanges: [
+      { _id: false, tankId: { type: mongoose.Schema.Types.ObjectId, ref: "Tank" }, delta: Number },
+    ],
     inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },
     voidedAt: Date,
     voidedReason: String,
-    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Dealer" },
+    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount" },
     status: { type: String, enum: ["active", "voided"], default: "active" },
   },
   { timestamps: true }
@@ -33,9 +40,11 @@ const transactionSchema = new mongoose.Schema(
 // workspaceId leading every compound index — enforces tenant isolation at
 // the query-plan level, not just at the route layer.
 transactionSchema.index({ workspaceId: 1, createdAt: -1 });
+transactionSchema.index({ workspaceId: 1, createdBy: 1, createdAt: -1 });
 transactionSchema.index({ workspaceId: 1, customerPhone: 1 });
 transactionSchema.index({ workspaceId: 1, paymentMode: 1, createdAt: -1 });
 
+transactionSchema.index({ workspaceId: 1, shiftId: 1, status: 1 });
 transactionSchema.plugin(requireWorkspaceScope);
 
 module.exports = mongoose.model("Transaction", transactionSchema);

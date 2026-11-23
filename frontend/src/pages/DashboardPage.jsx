@@ -1,3 +1,4 @@
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useDailySummary } from "../hooks/useDailySummary";
@@ -8,6 +9,7 @@ import NotificationBanner from "../components/dashboard/NotificationBanner";
 import RecentTransactionList from "../components/dashboard/RecentTransactionList";
 import SkeletonCard from "../components/shared/SkeletonCard";
 export default function DashboardPage() {
+  const { user } = useAuth();
   const { summary, loading } = useDailySummary();
   const { items } = useTransactions({ limit: 8, today: true });
   if (loading)
@@ -35,10 +37,12 @@ export default function DashboardPage() {
         </Link>
       </div>
       <DailySummaryCard summary={summary} />
-      <NotificationBanner
-        sent={summary?.notifications?.sent || 0}
-        failed={summary?.notifications?.failed || 0}
-      />
+      {user?.permissions?.includes("notifications:manage") && (
+        <NotificationBanner
+          sent={summary?.notifications?.sent || 0}
+          failed={summary?.notifications?.failed || 0}
+        />
+      )}
       <div className="grid gap-7 lg:grid-cols-[.8fr_1.2fr]">
         <section>
           <div className="mb-3 flex items-center justify-between">
@@ -46,12 +50,14 @@ export default function DashboardPage() {
               <p className="mono-label">Inventory pulse</p>
               <h3 className="mt-1 font-bold">Today&apos;s movement</h3>
             </div>
-            <Link
-              to="/inventory"
-              className="text-xs font-semibold text-slate-500 hover:text-slate-900"
-            >
-              View inventory
-            </Link>
+            {user?.permissions?.includes("inventory:read") && (
+              <Link
+                to="/inventory"
+                className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+              >
+                View inventory
+              </Link>
+            )}
           </div>
           <div className="panel p-5">
             {(summary?.items || []).map((i) => (

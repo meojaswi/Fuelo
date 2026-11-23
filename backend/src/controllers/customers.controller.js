@@ -1,4 +1,9 @@
-const Dealer = require("../models/dealer.model");
+const { lockWorkspace } = require("../services/workspaceWrite.service");
+const { assertCan } = require("../services/entitlements.service");
+const { creditAge } = require("../services/fleetCredit.service");
+const { writePump } = require("../services/pumpWrite.service");
+const { buildReminder } = require("../services/messageBuilder.service");
+const audit = require("../services/audit.service");
 const LedgerEntry = require("../models/ledgerEntry.model");
 const { atomic, fail } = require("../services/atomic.service");
 const { postEntry } = require("../services/ledger.service");
@@ -37,7 +42,7 @@ async function autocomplete(req, res) {
     workspaceId: req.workspaceId,
     name: { $regex: `^${prefix}`, $options: "i" },
   })
-    .select("name phone isCreditCustomer")
+    .select("name phone isCreditCustomer vehicles")
     .limit(10);
 
   res.json({ customers });
@@ -78,9 +83,11 @@ async function ledger(req, res) {
 
 async function recordPayment(req, res) {
   const { workspaceId } = req;
-  const dealer = await Dealer.findOne({ workspaceId }).select("businessName");
-  if (!dealer) fail(404, "Workspace not found");
   const result = await atomic(workspaceId, async (context) => {
+    const workspace = await lockWorkspace(workspaceId, context);
+    const options = { workspace, session: context.session };
+    await assertCan(workspaceId, "write", options);
+    await assertCan(workspaceId, "feature:creditLedger", options);
     const { entry, customer } = await postEntry(
       {
         ...req.body,
@@ -88,7 +95,7 @@ async function recordPayment(req, res) {
         customerId: req.params.id,
         type: "payment",
         direction: "credit",
-        createdBy: req.user.dealerId,
+        createdBy: req.user.userId,
       },
       context
     );
@@ -98,7 +105,7 @@ async function recordPayment(req, res) {
         channel: "whatsapp",
         toPhone: customer.phone,
         body: buildPaymentReceipt({
-          businessName: dealer.businessName,
+          workspace,
           amount: entry.amount,
           remainingBalance: entry.balanceAfter,
         }),
@@ -107,11 +114,21 @@ async function recordPayment(req, res) {
     );
     return { entry, customer };
   });
+  await audit.record(req, {
+    action: "payment.record",
+    entityType: "ledgerEntry",
+    entityId: result.entry._id,
+    summary: "Recorded a customer payment",
+    meta: { amount: result.entry.amount, paymentMode: result.entry.paymentMode },
+  });
   res.status(201).json(result);
 }
 
 async function outstanding(req, res) {
   const { workspaceId } = req;
+  const overdue = req.query.minDaysOverdue;
+  if (overdue !== undefined && (typeof overdue !== "string" || !/^\d{1,5}$/.test(overdue)))
+    fail(400, "minDaysOverdue must be a non-negative integer");
   const customers = await Customer.aggregate([
     { $match: { workspaceId, creditBalance: { $gt: 0 } } },
     { $sort: { creditBalance: -1, _id: 1 } },
@@ -132,12 +149,83 @@ async function outstanding(req, res) {
     { $set: { lastPaymentAt: { $ifNull: [{ $first: "$payments.createdAt" }, null] } } },
     { $unset: "payments" },
   ]);
+  const entries = await LedgerEntry.find({
+    workspaceId,
+    customerId: { $in: customers.map((customer) => customer._id) },
+  })
+    .select("customerId type direction amount transactionId createdAt")
+    .sort({ customerId: 1, createdAt: 1, _id: 1 })
+    .lean();
+  const byCustomer = new Map();
+  for (const entry of entries) {
+    const key = String(entry.customerId);
+    if (!byCustomer.has(key)) byCustomer.set(key, []);
+    byCustomer.get(key).push(entry);
+  }
+  const now = new Date();
+  const aged = customers.map((customer) => ({
+    ...customer,
+    ...creditAge(byCustomer.get(String(customer._id)) ?? [], customer.creditDays, now),
+  }));
+  const matching =
+    overdue === undefined
+      ? aged
+      : aged.filter(({ daysOverdue }) => daysOverdue !== null && daysOverdue >= Number(overdue));
   res.json({
-    customers,
+    customers: matching,
     totalOutstanding: roundMoney(
-      customers.reduce((total, customer) => total + customer.creditBalance, 0)
+      matching.reduce((total, customer) => total + customer.creditBalance, 0)
     ),
   });
+}
+
+async function remind(req, res) {
+  const { workspaceId } = req;
+  const customer = await writePump(req, "vehicleNumber", async (context, workspace) => {
+    const { session, compensate } = context;
+    await assertCan(workspaceId, "feature:creditLedger", { workspace, session });
+    const filter = { workspaceId, _id: req.params.id };
+    const now = new Date();
+    const existing = await Customer.findOne(filter).session(session);
+    if (!existing) fail(404, "Customer not found");
+    if (existing.creditBalance <= 0) fail(409, "Customer has no outstanding dues");
+    const updated = await Customer.findOneAndUpdate(
+      {
+        ...filter,
+        creditBalance: { $gt: 0 },
+        $or: [{ lastReminderAt: null }, { lastReminderAt: { $lte: new Date(+now - 86400000) } }],
+      },
+      { $set: { lastReminderAt: now } },
+      { new: true, session }
+    );
+    if (!updated) fail(429, "A dues reminder was already queued in the last 24 hours");
+    compensate(() =>
+      Customer.updateOne(
+        { ...filter, lastReminderAt: now },
+        existing.lastReminderAt
+          ? { $set: { lastReminderAt: existing.lastReminderAt } }
+          : { $unset: { lastReminderAt: 1 } }
+      )
+    );
+    await enqueue(
+      {
+        workspaceId,
+        channel: "whatsapp",
+        toPhone: updated.phone.length === 10 ? "+91" + updated.phone : updated.phone,
+        ...buildReminder(workspace, updated),
+      },
+      context
+    );
+    return updated;
+  });
+  await audit.record(req, {
+    action: "credit.reminder",
+    entityType: "customer",
+    entityId: customer._id,
+    summary: "Queued a customer dues reminder",
+    meta: { amount: customer.creditBalance },
+  });
+  res.status(202).json({ queued: true, lastReminderAt: customer.lastReminderAt });
 }
 
 module.exports = {
@@ -149,4 +237,5 @@ module.exports = {
   ledger,
   recordPayment,
   outstanding,
+  remind,
 };

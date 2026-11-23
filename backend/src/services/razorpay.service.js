@@ -39,4 +39,15 @@ async function transferShare({ paymentId, linkedAccountId, amountInPaise, shareP
   });
 }
 
-module.exports = { createSubscription, transferShare };
+async function cancelSubscription(subscriptionId, atCycleEnd = true) {
+  return getClient().subscriptions.cancel(subscriptionId, atCycleEnd);
+}
+
+async function changePlan(subscriptionId, razorpayPlanId) {
+  return getClient().subscriptions.update(subscriptionId, {
+    plan_id: razorpayPlanId,
+    schedule_change_at: "cycle_end",
+  });
+}
+
+module.exports = { createSubscription, transferShare, cancelSubscription, changePlan };

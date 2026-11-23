@@ -1,7 +1,16 @@
+const { transactionScope } = require("../utils/transactionScope");
+const { lockWorkspace } = require("../services/workspaceWrite.service");
+const { assertCan } = require("../services/entitlements.service");
+const audit = require("../services/audit.service");
+const UserAccount = require("../models/userAccount.model");
+const Shift = require("../models/shift.model");
+const Customer = require("../models/customer.model");
+const { getVertical } = require("../config/verticals");
+const { normalizeVehicle, hasUnusualFormat } = require("../utils/vehicleNumber");
 const Notification = require("../models/notification.model");
 const { istDayBoundsUTC } = require("../utils/datetime");
 const Transaction = require("../models/transaction.model");
-const Dealer = require("../models/dealer.model");
+const Workspace = require("../models/workspace.model");
 const { atomic, fail } = require("../services/atomic.service");
 const { MAX_MONEY, roundMoney, priceForQuantity } = require("../utils/money");
 const { changeStock } = require("../services/stock.service");
@@ -12,25 +21,41 @@ const pdfService = require("../services/pdf.service");
 
 async function create(req, res) {
   const { workspaceId } = req;
-  const dealer = await Dealer.findOne({ workspaceId }).select("businessName config");
-  if (!dealer) return res.status(404).json({ error: "Workspace not found" });
-
-  const { override, ...sale } = req.body;
-  const tx = await atomic(workspaceId, async (context) => {
-    const transaction = new Transaction({ ...sale, workspaceId });
+  const { override, vehicleNumber, ...sale } = req.body;
+  const { tx, usage } = await atomic(workspaceId, async (context) => {
+    const dealer = await lockWorkspace(workspaceId, context);
+    const options = { workspace: dealer, session: context.session };
+    const usage = await assertCan(workspaceId, "transaction:create", options);
+    if (sale.paymentMode === "credit")
+      await assertCan(workspaceId, "feature:creditLedger", options);
+    const features = getVertical(dealer.verticalType).flags;
+    const shift =
+      features.shifts &&
+      (await Shift.findOne({ workspaceId, status: "open" }).select("_id").session(context.session));
+    const vehicle = features.vehicleNumber ? normalizeVehicle(vehicleNumber) : undefined;
+    const transaction = new Transaction({
+      ...sale,
+      workspaceId,
+      createdBy: req.user.userId,
+      shiftId: shift?._id,
+      vehicleNumber: vehicle,
+      vehicleNumberWarning: hasUnusualFormat(vehicle) || undefined,
+    });
     const inventory = await changeStock(
       {
         filter: { workspaceId, itemType: transaction.itemType },
         delta: -transaction.quantity,
         reason: "sale",
         transactionId: transaction._id,
-        createdBy: req.user.dealerId,
+        createdBy: req.user.userId,
         allowNegative: dealer.config?.allowNegativeStock === true,
       },
       context
     );
     if (inventory) {
       transaction.inventoryId = inventory._id;
+      transaction.tankChanges = inventory.$locals.tankChanges;
+      if (transaction.tankChanges.length) transaction.quantity = roundMoney(transaction.quantity);
       transaction.unit = inventory.unit;
       const expected = priceForQuantity(inventory.pricePerUnit, transaction.quantity);
       if (!Number.isFinite(expected) || expected > MAX_MONEY) {
@@ -43,10 +68,22 @@ async function create(req, res) {
     if (transaction.paymentMode === "credit") {
       transaction.customerId = await recordCreditSale(
         transaction,
-        req.user.dealerId,
-        override,
+        req.user.userId,
+        override && req.user.role !== "attendant",
         context
       );
+      if (vehicle) {
+        const customerScope = { workspaceId, _id: transaction.customerId };
+        const added = await Customer.updateOne(
+          { ...customerScope, "vehicles.number": { $ne: vehicle } },
+          { $push: { vehicles: { number: vehicle } } },
+          { session: context.session }
+        );
+        if (added.modifiedCount)
+          context.compensate(() =>
+            Customer.updateOne(customerScope, { $pull: { vehicles: { number: vehicle } } })
+          );
+      }
     }
     await transaction.save({ session: context.session });
     context.compensate(() => Transaction.deleteOne({ workspaceId, _id: transaction._id }));
@@ -56,21 +93,36 @@ async function create(req, res) {
         transactionId: transaction._id,
         channel: "whatsapp",
         toPhone: transaction.customerPhone,
-        body: messageBuilder.buildTransactionReceipt(transaction, dealer.businessName),
+        body: messageBuilder.buildTransactionReceipt(transaction, dealer),
       },
       context
     );
-    return transaction;
+    return { tx: transaction, usage };
   });
 
-  res.status(201).json(tx);
+  if (tx.paymentMode === "credit" && override && req.user.role !== "attendant") {
+    await audit.record(req, {
+      action: "credit.override",
+      entityType: "transaction",
+      entityId: tx._id,
+      summary: "Credit limit override used",
+      meta: { amount: tx.amount },
+    });
+  }
+  if (usage?.nearTransactionCap) res.set("X-Fuelo-Usage-Warning", "MONTHLY_TRANSACTIONS_80");
+  res.status(201).json({
+    ...tx.toObject(),
+    ...(usage?.nearTransactionCap && { usageWarning: "MONTHLY_TRANSACTIONS_80" }),
+  });
 }
 
 async function voidSale(req, res) {
   const { workspaceId } = req;
   const scope = { workspaceId, _id: req.params.id };
   const transaction = await atomic(workspaceId, async (context) => {
+    const workspace = await lockWorkspace(workspaceId, context);
     const { session, compensate } = context;
+    await assertCan(workspaceId, "write", { workspace, session });
     const tx = await Transaction.findOneAndUpdate(
       { ...scope, status: "active" },
       {
@@ -78,7 +130,7 @@ async function voidSale(req, res) {
           status: "voided",
           voidedReason: req.body.reason,
           voidedAt: new Date(),
-          voidedBy: req.user.dealerId,
+          voidedBy: req.user.userId,
         },
       },
       { new: true, session }
@@ -94,20 +146,36 @@ async function voidSale(req, res) {
         $unset: { voidedReason: 1, voidedAt: 1, voidedBy: 1 },
       })
     );
+    if (
+      tx.shiftId &&
+      (await Shift.exists({ workspaceId, _id: tx.shiftId, status: "closed" }).session(session))
+    ) {
+      fail(409, "Reopen the shift before voiding one of its sales");
+    }
     if (tx.inventoryId) {
       await changeStock(
         {
           filter: { workspaceId, _id: tx.inventoryId, itemType: tx.itemType },
           delta: tx.quantity,
           reason: "void",
+          allowOverflow: true,
+          tankChanges: tx.tankChanges?.length
+            ? tx.tankChanges.map(({ tankId, delta }) => ({ tankId, delta: -delta }))
+            : undefined,
           transactionId: tx._id,
-          createdBy: req.user.dealerId,
+          createdBy: req.user.userId,
         },
         context
       );
     }
-    if (tx.paymentMode === "credit") await reverseCreditSale(tx, req.user.dealerId, context);
+    if (tx.paymentMode === "credit") await reverseCreditSale(tx, req.user.userId, context);
     return tx;
+  });
+  await audit.record(req, {
+    action: "transaction.void",
+    entityType: "transaction",
+    entityId: transaction._id,
+    summary: "Voided a sale",
   });
   res.json(transaction);
 }
@@ -116,7 +184,7 @@ async function list(req, res) {
   const { paymentMode, customer, itemTypes, today } = req.query;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
-  const filter = { workspaceId: req.workspaceId };
+  const filter = transactionScope(req);
   if (paymentMode) filter.paymentMode = paymentMode;
   if (typeof customer === "string" && customer.trim()) {
     const search = customer
@@ -143,24 +211,26 @@ async function list(req, res) {
 }
 
 async function getById(req, res) {
-  const tx = await Transaction.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
+  const tx = await Transaction.findOne({ _id: req.params.id, ...transactionScope(req) });
   if (!tx) return res.status(404).json({ error: "Transaction not found" });
   const notification = await Notification.findOne({
     workspaceId: req.workspaceId,
     transactionId: tx._id,
   }).sort({ createdAt: -1, _id: -1 });
+  const actor = tx.createdBy && (await UserAccount.findById(tx.createdBy).select("name"));
   res.json({
     ...tx.toObject(),
+    recordedBy: actor?.name,
     notificationId: notification?._id,
     notificationStatus: notification?.status ?? "pending",
   });
 }
 
 async function getReceiptPdf(req, res) {
-  const tx = await Transaction.findOne({ _id: req.params.id, workspaceId: req.workspaceId });
+  const tx = await Transaction.findOne({ _id: req.params.id, ...transactionScope(req) });
   if (!tx) return res.status(404).json({ error: "Transaction not found" });
 
-  const dealer = await Dealer.findOne({ workspaceId: req.workspaceId }).select("businessName");
+  const dealer = await Workspace.findOne({ workspaceId: req.workspaceId }).select("businessName");
   if (!dealer) return res.status(404).json({ error: "Workspace not found" });
 
   res.setHeader("Content-Type", "application/pdf");

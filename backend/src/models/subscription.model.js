@@ -7,11 +7,14 @@ const subscriptionPlanSchema = new mongoose.Schema(
     name: { type: String, required: true }, // "Starter", "Growth", "Business"
     billingCycle: { type: String, enum: ["monthly", "yearly"], required: true },
     priceInPaise: { type: Number, required: true },
+    planLimits: mongoose.Schema.Types.Mixed,
     transactionCap: { type: Number }, // null = unlimited
     razorpayPlanId: { type: String, required: true },
   },
   { timestamps: true }
 );
+
+subscriptionPlanSchema.index({ name: 1, billingCycle: 1 }, { unique: true });
 
 const workspaceSubscriptionSchema = new mongoose.Schema(
   {
@@ -24,9 +27,13 @@ const workspaceSubscriptionSchema = new mongoose.Schema(
       default: "created",
     },
     currentPeriodEnd: { type: Date },
+    lastEventAt: Number,
+    lastEventRank: Number,
+    pendingPlanId: { type: mongoose.Schema.Types.ObjectId, ref: "SubscriptionPlan" },
   },
   { timestamps: true }
 );
+workspaceSubscriptionSchema.index({ razorpaySubscriptionId: 1 }, { unique: true });
 workspaceSubscriptionSchema.plugin(requireWorkspaceScope);
 
 // Kirti's revenue-share account, linked via Razorpay Route for auto-splits

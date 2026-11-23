@@ -33,6 +33,9 @@ async function retry(req, res) {
   });
   if (!job) return res.status(404).json({ error: "Underlying message job not found" });
 
+  if (job.sensitive)
+    return res.status(409).json({ error: "Send a new invite or recovery code instead" });
+
   job.status = "pending";
   job.attempts = 0;
   job.lastError = undefined;

@@ -1,8 +1,10 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AlertCircle, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { updateDealerRequest } from "../api/dealer.api";
 import { updatePasswordRequest } from "../api/auth.api";
+import PumpPreferences from "../components/settings/PumpPreferences";
 import Button from "../components/shared/Button";
 
 export default function SettingsPage() {
@@ -100,7 +102,8 @@ export default function SettingsPage() {
     setSecurityLoading(true);
     setSecurityMessage(null);
     try {
-      await updatePasswordRequest({ currentPassword, newPassword });
+      const session = await updatePasswordRequest({ currentPassword, newPassword });
+      updateSession(session);
       setCurrentPassword("");
       setNewPassword("");
       setSecurityMessage({ type: "success", text: "Password changed successfully." });
@@ -122,120 +125,132 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-slate-500">Manage your business profile and preferences.</p>
       </div>
 
-      {/* Business Profile */}
-      <div className="panel p-6">
-        <h3 className="font-bold text-lg mb-4">Business Profile</h3>
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Business Name</label>
-            <input
-              type="text"
-              required
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold mb-1 text-slate-500">
-              Vertical Type (Read-only)
-            </label>
-            <input
-              type="text"
-              value={user?.verticalType || ""}
-              disabled
-              className="w-full rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 uppercase tracking-wide cursor-not-allowed"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={allowNegativeStock}
-              onChange={(e) => setAllowNegativeStock(e.target.checked)}
-            />
-            Allow sales to take tracked stock below zero
-          </label>
-          {profileMessage && (
-            <div
-              className={`flex items-center gap-2 text-sm font-medium ${profileMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
-            >
-              {profileMessage.type === "error" ? (
-                <AlertCircle size={16} />
-              ) : (
-                <CheckCircle2 size={16} />
-              )}
-              {profileMessage.text}
-            </div>
-          )}
-          <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={profileLoading}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </div>
-
-      {/* Item Types Config */}
-      <div className="panel p-6">
-        <div className="mb-4">
-          <h3 className="font-bold text-lg">Item Types</h3>
-          <p className="text-sm text-slate-500">
-            Configure the inventory items available for transactions in this workspace.
-          </p>
-        </div>
-
-        <div className="space-y-3 mb-6">
-          {itemTypes.length === 0 ? (
-            <div className="text-sm text-slate-400 italic py-2">No item types configured.</div>
-          ) : (
-            itemTypes.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between rounded-[8px] border border-slate-200 p-3 bg-slate-50"
-              >
-                <span className="font-medium text-sm">{item}</span>
-                <button
-                  onClick={() => handleRemoveItem(idx)}
-                  disabled={itemsLoading}
-                  className="text-slate-400 hover:text-red-500 transition"
-                  title="Remove item"
-                >
-                  <Trash2 size={16} />
-                </button>
+      {user?.permissions?.includes("settings:manage") && (
+        <>
+          <div className="panel p-6">
+            <h3 className="font-bold text-lg mb-4">Business Profile</h3>
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Business Name</label>
+                <input
+                  type="text"
+                  required
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                />
               </div>
-            ))
-          )}
-        </div>
-
-        <form onSubmit={handleAddItem} className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-1">Add New Item</label>
-            <input
-              type="text"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              placeholder="e.g. Diesel, Grade A Timber"
-              className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
-            />
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-slate-500">
+                  Vertical Type (Read-only)
+                </label>
+                <input
+                  type="text"
+                  value={user?.verticalType || ""}
+                  disabled
+                  className="w-full rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 uppercase tracking-wide cursor-not-allowed"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={allowNegativeStock}
+                  onChange={(e) => setAllowNegativeStock(e.target.checked)}
+                />
+                Allow sales to take tracked stock below zero
+              </label>
+              {profileMessage && (
+                <div
+                  className={`flex items-center gap-2 text-sm font-medium ${profileMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
+                >
+                  {profileMessage.type === "error" ? (
+                    <AlertCircle size={16} />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  {profileMessage.text}
+                </div>
+              )}
+              <div className="flex justify-end pt-2">
+                <Button type="submit" disabled={profileLoading}>
+                  Save Changes
+                </Button>
+              </div>
+            </form>
           </div>
-          <Button
-            type="submit"
-            disabled={itemsLoading || !newItemName.trim()}
-            className="flex items-center gap-2"
-          >
-            <Plus size={16} /> Add
-          </Button>
-        </form>
-        {itemsMessage && (
-          <div
-            className={`mt-3 flex items-center gap-2 text-sm font-medium ${itemsMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
-          >
-            {itemsMessage.type === "error" ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
-            {itemsMessage.text}
-          </div>
-        )}
-      </div>
 
+          {/* Item Types Config */}
+          <div className="panel p-6">
+            <div className="mb-4">
+              <h3 className="font-bold text-lg">Item Types</h3>
+              <p className="text-sm text-slate-500">
+                Configure the inventory items available for transactions in this workspace.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {itemTypes.length === 0 ? (
+                <div className="text-sm text-slate-400 italic py-2">No item types configured.</div>
+              ) : (
+                itemTypes.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-[8px] border border-slate-200 p-3 bg-slate-50"
+                  >
+                    <span className="font-medium text-sm">{item}</span>
+                    <button
+                      onClick={() => handleRemoveItem(idx)}
+                      disabled={itemsLoading}
+                      className="text-slate-400 hover:text-red-500 transition"
+                      title="Remove item"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form onSubmit={handleAddItem} className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold mb-1">Add New Item</label>
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="e.g. Diesel, Grade A Timber"
+                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={itemsLoading || !newItemName.trim()}
+                className="flex items-center gap-2"
+              >
+                <Plus size={16} /> Add
+              </Button>
+            </form>
+            {itemsMessage && (
+              <div
+                className={`mt-3 flex items-center gap-2 text-sm font-medium ${itemsMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}
+              >
+                {itemsMessage.type === "error" ? (
+                  <AlertCircle size={16} />
+                ) : (
+                  <CheckCircle2 size={16} />
+                )}
+                {itemsMessage.text}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      {user?.permissions?.includes("billing:manage") && (
+        <Link className="block font-semibold text-fuelo-coral" to="/settings/billing">
+          Manage billing
+        </Link>
+      )}
+      {user?.permissions?.includes("settings:manage") && <PumpPreferences key={user.workspaceId} />}
       {/* Security */}
       <div className="panel p-6 border-red-100">
         <h3 className="font-bold text-lg mb-4 text-red-600">Security</h3>
