@@ -43,8 +43,23 @@ async function create(req, res) {
       }
       const alreadyTracked = await Tank.exists({ ...scope, isActive: true }).session(session);
       const opening = alreadyTracked ? 0 : item.currentStock;
-      if (opening < 0 || opening > capacityLitres || roundMoney(opening) !== opening) {
-        fail(409, "Set existing inventory to a two-decimal quantity that fits the first tank");
+      if (opening < 0) {
+        fail(
+          409,
+          `${itemType} stock is negative. Correct the stock in Inventory, then add the tank.`
+        );
+      }
+      if (roundMoney(opening) !== opening) {
+        fail(
+          409,
+          `${itemType} stock (${opening} L) has more than two decimal places. Round it to two decimals in Inventory, then add the tank.`
+        );
+      }
+      if (opening > capacityLitres) {
+        fail(
+          409,
+          `${itemType} stock in Inventory is ${opening} L, which is more than this tank's capacity of ${capacityLitres} L. Increase the capacity to at least ${opening} L, or lower the stock in Inventory.`
+        );
       }
       const entry = await new Tank({ workspaceId, name, itemType, capacityLitres }).save({
         session,
