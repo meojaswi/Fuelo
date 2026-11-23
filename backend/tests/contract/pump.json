@@ -1,0 +1,845 @@
+[
+  {
+    "method": "DELETE",
+    "route": "/api/nozzles/:id",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  { "method": "DELETE", "route": "/api/tanks/:id", "status": 404, "shape": { "error": "string" } },
+  { "method": "DELETE", "route": "/api/tanks/:id", "status": 409, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/customers/:id",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "creditBalance": "number",
+      "creditDays": "null",
+      "creditLimit": "null",
+      "isCreditCustomer": "boolean",
+      "name": "string",
+      "phone": "string",
+      "updatedAt": "datetime",
+      "vehicles": [{ "number": "string" }],
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/deliveries",
+    "status": 200,
+    "shape": {
+      "deliveries": [],
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/deliveries",
+    "status": 200,
+    "shape": {
+      "deliveries": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "createdAt": "datetime",
+          "itemType": "string",
+          "quantityLitres": "number",
+          "ratePerLitre": "number",
+          "receivedAt": "datetime",
+          "receivedBy": "id",
+          "status": "string",
+          "supplierName": "string",
+          "tankId": "id",
+          "totalAmount": "number",
+          "updatedAt": "datetime",
+          "voidedAt": "datetime",
+          "voidedBy": "id",
+          "voidedReason": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number"
+    }
+  },
+  { "method": "GET", "route": "/api/deliveries", "status": 400, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/deliveries", "status": 403, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/inventory",
+    "status": 200,
+    "shape": [
+      {
+        "__v": "number",
+        "_id": "id",
+        "createdAt": "datetime",
+        "currentPieces": "number",
+        "currentStock": "number",
+        "itemType": "string",
+        "lastPriceUpdate": "datetime",
+        "pricePerUnit": "number",
+        "priceSource": "string",
+        "unit": "string",
+        "updatedAt": "datetime",
+        "workspaceId": "string"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "route": "/api/nozzles",
+    "status": 200,
+    "shape": {
+      "nozzles": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "createdAt": "datetime",
+          "isActive": "boolean",
+          "itemType": "string",
+          "label": "string",
+          "lastMeterReading": "number",
+          "tankId": "id",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/pump-daily",
+    "status": 200,
+    "shape": {
+      "date": "date",
+      "items": [],
+      "shifts": [],
+      "tanks": [],
+      "timezone": "string",
+      "varianceThresholdPercent": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/pump-daily",
+    "status": 200,
+    "shape": {
+      "date": "date",
+      "items": [
+        {
+          "adjustmentLitres": "number",
+          "closingBookStock": "number",
+          "deliveriesLitres": "number",
+          "dippedTanks": "number",
+          "flagged": "boolean",
+          "individualSalesLitres": "number",
+          "itemType": "string",
+          "meterAdditionalLitres": "number",
+          "meterSalesLitres": "number",
+          "openingBookStock": "number",
+          "throughputLitres": "number",
+          "varianceLitres": "number"
+        }
+      ],
+      "shifts": [
+        {
+          "closedAt": "datetime",
+          "creditSalesTotal": "number",
+          "declaredCard": "number",
+          "declaredCash": "number",
+          "declaredTotal": "number",
+          "declaredUpi": "number",
+          "expectedSalesTotal": "number",
+          "hours": "number",
+          "litres": "number",
+          "openedAt": "datetime",
+          "openedBy": "id",
+          "openedByName": "string",
+          "shiftId": "id",
+          "variance": "number"
+        }
+      ],
+      "tanks": [
+        {
+          "adjustmentLitres": "number",
+          "closingBookStock": "number",
+          "deliveriesLitres": "number",
+          "flagged": "boolean",
+          "individualSalesLitres": "number",
+          "itemType": "string",
+          "latestDip": "null",
+          "meterAdditionalLitres": "number",
+          "meterSalesLitres": "number",
+          "name": "string",
+          "openingBookStock": "number",
+          "tankId": "id",
+          "throughputLitres": "number",
+          "varianceLitres": "null"
+        },
+        {
+          "adjustmentLitres": "number",
+          "closingBookStock": "number",
+          "deliveriesLitres": "number",
+          "flagged": "boolean",
+          "individualSalesLitres": "number",
+          "itemType": "string",
+          "latestDip": {
+            "__v": "number",
+            "_id": "id",
+            "bookStock": "number",
+            "createdAt": "datetime",
+            "readingLitres": "number",
+            "recordedAt": "datetime",
+            "recordedBy": "id",
+            "tankId": "id",
+            "updatedAt": "datetime",
+            "varianceLitres": "number",
+            "workspaceId": "string"
+          },
+          "meterAdditionalLitres": "number",
+          "meterSalesLitres": "number",
+          "name": "string",
+          "openingBookStock": "number",
+          "tankId": "id",
+          "throughputLitres": "number",
+          "varianceLitres": "number"
+        }
+      ],
+      "timezone": "string",
+      "varianceThresholdPercent": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/pump-daily",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/shifts",
+    "status": 200,
+    "shape": { "page": "number", "pages": "number", "shifts": [], "total": "number" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/shifts/:id",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "creditSalesTotal": "number",
+      "nozzleReadings": [
+        {
+          "itemType": "string",
+          "label": "string",
+          "nozzleId": "id",
+          "openingMeter": "number",
+          "previousMeter": "number",
+          "tankId": "id"
+        }
+      ],
+      "openedAt": "datetime",
+      "openedBy": "id",
+      "pricesSnapshot": [{ "itemType": "string", "pricePerUnit": "number" }],
+      "status": "string",
+      "stockEffects": [],
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "GET", "route": "/api/shifts/:id", "status": 404, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/tanks", "status": 200, "shape": { "tanks": [] } },
+  {
+    "method": "GET",
+    "route": "/api/tanks",
+    "status": 200,
+    "shape": {
+      "tanks": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "bookStock": "number",
+          "capacityLitres": "number",
+          "createdAt": "datetime",
+          "isActive": "boolean",
+          "itemType": "string",
+          "name": "string",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/tanks",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  { "method": "GET", "route": "/api/tanks", "status": 403, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/tanks/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/tanks/:id/dips",
+    "status": 200,
+    "shape": {
+      "dips": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "bookStock": "number",
+          "createdAt": "datetime",
+          "readingLitres": "number",
+          "recordedAt": "datetime",
+          "recordedBy": "id",
+          "tankId": "id",
+          "updatedAt": "datetime",
+          "varianceLitres": "number",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/tanks/:id/dips",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  { "method": "GET", "route": "/api/tanks/dip-targets", "status": 200, "shape": { "tanks": [] } },
+  {
+    "method": "GET",
+    "route": "/api/tanks/dip-targets",
+    "status": 200,
+    "shape": {
+      "tanks": [{ "_id": "id", "capacityLitres": "number", "itemType": "string", "name": "string" }]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/tanks/dip-targets",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/dealer",
+    "status": 200,
+    "shape": {
+      "businessName": "string",
+      "config": {
+        "attendantsCanDip": "boolean",
+        "itemTypes": ["string"],
+        "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+      },
+      "id": "id",
+      "language": "string",
+      "verticalType": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/dealer",
+    "status": 200,
+    "shape": {
+      "businessName": "string",
+      "config": {
+        "itemTypes": ["string"],
+        "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" },
+        "pumpVariancePercent": "number",
+        "shiftVarianceAlertRupees": "number"
+      },
+      "id": "id",
+      "language": "string",
+      "verticalType": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/inventory/Diesel",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "currentPieces": "number",
+      "currentStock": "number",
+      "itemType": "string",
+      "lastPriceUpdate": "datetime",
+      "pricePerUnit": "number",
+      "priceSource": "string",
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "PATCH", "route": "/api/nozzles/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "PATCH",
+    "route": "/api/tanks/:id",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "bookStock": "number",
+      "capacityLitres": "number",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "itemType": "string",
+      "name": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "PATCH", "route": "/api/tanks/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/auth/signup",
+    "status": 201,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "deliveries": "boolean",
+          "pumpReports": "boolean",
+          "shifts": "boolean",
+          "tanks": "boolean",
+          "vehicleNumber": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "deliveries": "boolean",
+            "pumpReports": "boolean",
+            "shifts": "boolean",
+            "tanks": "boolean",
+            "vehicleNumber": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/deliveries",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "itemType": "string",
+      "quantityLitres": "number",
+      "ratePerLitre": "number",
+      "receivedAt": "datetime",
+      "receivedBy": "id",
+      "status": "string",
+      "supplierName": "string",
+      "tankId": "id",
+      "totalAmount": "number",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "POST", "route": "/api/deliveries", "status": 404, "shape": { "error": "string" } },
+  { "method": "POST", "route": "/api/deliveries", "status": 409, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/deliveries/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "itemType": "string",
+      "quantityLitres": "number",
+      "ratePerLitre": "number",
+      "receivedAt": "datetime",
+      "receivedBy": "id",
+      "status": "string",
+      "supplierName": "string",
+      "tankId": "id",
+      "totalAmount": "number",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/deliveries/:id/void",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/nozzles",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "itemType": "string",
+      "label": "string",
+      "lastMeterReading": "number",
+      "tankId": "id",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "POST", "route": "/api/nozzles", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/close",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "closedAt": "datetime",
+      "createdAt": "datetime",
+      "creditSalesTotal": "number",
+      "declaredCard": "number",
+      "declaredCash": "number",
+      "declaredUpi": "number",
+      "expectedSalesTotal": "number",
+      "nozzleReadings": [
+        {
+          "closingMeter": "number",
+          "itemType": "string",
+          "label": "string",
+          "litresSold": "number",
+          "nozzleId": "id",
+          "openingMeter": "number",
+          "previousMeter": "number",
+          "tankId": "id",
+          "testLitres": "number"
+        }
+      ],
+      "openedAt": "datetime",
+      "openedBy": "id",
+      "pricesSnapshot": [{ "itemType": "string", "pricePerUnit": "number" }],
+      "status": "string",
+      "stockEffects": [
+        {
+          "delta": "number",
+          "itemType": "string",
+          "movementId": "id",
+          "tankChanges": [{ "delta": "number", "tankId": "id" }]
+        }
+      ],
+      "updatedAt": "datetime",
+      "variance": "number",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/close",
+    "status": 400,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/close",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/close",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/reopen",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "creditSalesTotal": "number",
+      "nozzleReadings": [
+        {
+          "itemType": "string",
+          "label": "string",
+          "nozzleId": "id",
+          "openingMeter": "number",
+          "previousMeter": "number",
+          "tankId": "id"
+        }
+      ],
+      "openedAt": "datetime",
+      "openedBy": "id",
+      "pricesSnapshot": [{ "itemType": "string", "pricePerUnit": "number" }],
+      "reopenedAt": "datetime",
+      "status": "string",
+      "stockEffects": [],
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/reopen",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/:id/reopen",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/shifts/open",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "nozzleReadings": [
+        {
+          "itemType": "string",
+          "label": "string",
+          "nozzleId": "id",
+          "openingMeter": "number",
+          "previousMeter": "number",
+          "tankId": "id"
+        }
+      ],
+      "openedAt": "datetime",
+      "openedBy": "id",
+      "pricesSnapshot": [{ "itemType": "string", "pricePerUnit": "number" }],
+      "status": "string",
+      "stockEffects": [],
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "POST", "route": "/api/shifts/open", "status": 400, "shape": { "error": "string" } },
+  { "method": "POST", "route": "/api/shifts/open", "status": 409, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/tanks",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "bookStock": "number",
+      "capacityLitres": "number",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "itemType": "string",
+      "name": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/tanks/:id/dips",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "bookStock": "number",
+      "createdAt": "datetime",
+      "readingLitres": "number",
+      "recordedAt": "datetime",
+      "recordedBy": "id",
+      "tankId": "id",
+      "updatedAt": "datetime",
+      "varianceLitres": "number",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/tanks/:id/dips",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/tanks/:id/dips",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "expectedAmount": "number",
+      "inventoryId": "id",
+      "itemType": "string",
+      "paymentMode": "string",
+      "priceMismatch": "boolean",
+      "quantity": "number",
+      "shiftId": "id",
+      "status": "string",
+      "tankChanges": [{ "delta": "number", "tankId": "id" }],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "vehicleNumber": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "expectedAmount": "number",
+      "inventoryId": "id",
+      "itemType": "string",
+      "paymentMode": "string",
+      "priceMismatch": "boolean",
+      "quantity": "number",
+      "shiftId": "id",
+      "status": "string",
+      "tankChanges": [{ "delta": "number", "tankId": "id" }],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "expectedAmount": "number",
+      "inventoryId": "id",
+      "itemType": "string",
+      "paymentMode": "string",
+      "priceMismatch": "boolean",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [{ "delta": "number", "tankId": "id" }],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "expectedAmount": "number",
+      "inventoryId": "id",
+      "itemType": "string",
+      "paymentMode": "string",
+      "priceMismatch": "boolean",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [{ "delta": "number", "tankId": "id" }],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  }
+]

@@ -1,0 +1,444 @@
+[
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "code": "string",
+      "currentPeriodEnd": "datetime",
+      "graceEndsAt": "null",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "null"
+      },
+      "nearTransactionCap": "boolean",
+      "nextRenewal": "datetime",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": "null",
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "currentPeriodEnd": "datetime",
+      "graceEndsAt": "datetime",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "null"
+      },
+      "nearTransactionCap": "boolean",
+      "nextRenewal": "datetime",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": "null",
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "currentPeriodEnd": "datetime",
+      "graceEndsAt": "null",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "null"
+      },
+      "nearTransactionCap": "boolean",
+      "nextRenewal": "datetime",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": "null",
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "currentPeriodEnd": "datetime",
+      "graceEndsAt": "null",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "number"
+      },
+      "nearTransactionCap": "boolean",
+      "nextRenewal": "datetime",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": "null",
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "currentPeriodEnd": "datetime",
+      "graceEndsAt": "null",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "number"
+      },
+      "nearTransactionCap": "boolean",
+      "nextRenewal": "datetime",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": { "billingCycle": "string", "name": "string" },
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 200,
+    "shape": {
+      "canCancel": "boolean",
+      "cancelAtCycleEnd": "boolean",
+      "checkoutPending": "boolean",
+      "graceEndsAt": "null",
+      "limits": {
+        "features": {
+          "creditLedger": "boolean",
+          "csvExport": "boolean",
+          "pdfReceipts": "boolean",
+          "pumpPack": "boolean",
+          "reports": "boolean",
+          "timberPack": "boolean"
+        },
+        "maxUsers": "number",
+        "maxWorkspaces": "number",
+        "monthlyTransactionCap": "number"
+      },
+      "nearTransactionCap": "boolean",
+      "planName": "string",
+      "readOnly": "boolean",
+      "scheduledPlan": "null",
+      "status": "string",
+      "trialDaysLeft": "number",
+      "trialEndsAt": "datetime",
+      "usage": { "members": "number", "transactions": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/billing/status",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/customers/outstanding",
+    "status": 200,
+    "shape": { "customers": [], "totalOutstanding": "number" }
+  },
+  { "method": "GET", "route": "/api/inventory", "status": 200, "shape": [] },
+  {
+    "method": "POST",
+    "route": "/api/auth/signup",
+    "status": 201,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "deliveries": "boolean",
+          "pumpReports": "boolean",
+          "shifts": "boolean",
+          "tanks": "boolean",
+          "vehicleNumber": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "deliveries": "boolean",
+            "pumpReports": "boolean",
+            "shifts": "boolean",
+            "tanks": "boolean",
+            "vehicleNumber": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/cancel",
+    "status": 200,
+    "shape": { "cancelAtCycleEnd": "boolean", "currentPeriodEnd": "datetime", "ok": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/cancel",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/subscriptions",
+    "status": 200,
+    "shape": { "checkout": { "keyId": "string", "subscriptionId": "string" } }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/subscriptions",
+    "status": 200,
+    "shape": { "message": "string", "scheduled": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/subscriptions",
+    "status": 201,
+    "shape": {
+      "checkout": { "keyId": "string", "subscriptionId": "string" },
+      "razorpaySubscription": { "id": "string" },
+      "subscription": {
+        "__v": "number",
+        "_id": "id",
+        "createdAt": "datetime",
+        "planId": "id",
+        "razorpaySubscriptionId": "string",
+        "status": "string",
+        "updatedAt": "datetime",
+        "workspaceId": "string"
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/subscriptions",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/webhook",
+    "status": 200,
+    "shape": { "deduped": "boolean", "ok": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/webhook",
+    "status": 200,
+    "shape": { "ignored": "boolean", "ok": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/webhook",
+    "status": 200,
+    "shape": { "ok": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/webhook",
+    "status": 400,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/members/invite",
+    "status": 201,
+    "shape": {
+      "createdAt": "datetime",
+      "id": "id",
+      "name": "string",
+      "phone": "string",
+      "role": "string",
+      "self": "boolean",
+      "status": "string",
+      "userId": "id"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/members/invite",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "itemType": "string",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "usageWarning": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "itemType": "string",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  }
+]

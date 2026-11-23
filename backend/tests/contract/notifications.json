@@ -1,0 +1,38 @@
+[
+  {
+    "method": "GET",
+    "route": "/api/notifications",
+    "status": 200,
+    "shape": { "limit": "number", "notifications": [], "page": "number", "total": "number" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/notifications",
+    "status": 200,
+    "shape": {
+      "limit": "number",
+      "notifications": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "channel": "string",
+          "createdAt": "datetime",
+          "messageBody": "string",
+          "messageJobId": "id",
+          "retryCount": "number",
+          "status": "string",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ],
+      "page": "number",
+      "total": "number"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/notifications/:id/retry",
+    "status": 200,
+    "shape": { "message": "string", "ok": "boolean" }
+  }
+]

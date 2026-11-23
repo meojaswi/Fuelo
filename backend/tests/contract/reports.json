@@ -1,0 +1,143 @@
+[
+  {
+    "method": "GET",
+    "route": "/api/reports/sales",
+    "status": 200,
+    "shape": {
+      "from": "date",
+      "groupBy": "string",
+      "groups": [],
+      "timezone": "string",
+      "to": "date",
+      "totals": { "amount": "number", "count": "number", "quantity": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/sales",
+    "status": 200,
+    "shape": {
+      "from": "date",
+      "groupBy": "string",
+      "groups": [{ "amount": "number", "count": "number", "group": "date", "quantity": "number" }],
+      "timezone": "string",
+      "to": "date",
+      "totals": { "amount": "number", "count": "number", "quantity": "number" }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/sales",
+    "status": 200,
+    "shape": {
+      "from": "date",
+      "groupBy": "string",
+      "groups": [
+        { "amount": "number", "count": "number", "group": "string", "quantity": "number" }
+      ],
+      "timezone": "string",
+      "to": "date",
+      "totals": { "amount": "number", "count": "number", "quantity": "number" }
+    }
+  },
+  { "method": "GET", "route": "/api/reports/sales", "status": 400, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/reports/sales", "status": 401, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/summary",
+    "status": 200,
+    "shape": {
+      "date": "date",
+      "items": [
+        {
+          "_id": "string",
+          "count": "number",
+          "totalAmount": "number",
+          "totalQuantity": "number",
+          "unit": "string"
+        }
+      ],
+      "live": "boolean",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "GET", "route": "/api/summary", "status": 400, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/auth/signup",
+    "status": 201,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "deliveries": "boolean",
+          "pumpReports": "boolean",
+          "shifts": "boolean",
+          "tanks": "boolean",
+          "vehicleNumber": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "deliveries": "boolean",
+            "pumpReports": "boolean",
+            "shifts": "boolean",
+            "tanks": "boolean",
+            "vehicleNumber": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  }
+]

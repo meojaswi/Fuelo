@@ -1,0 +1,437 @@
+[
+  {
+    "method": "DELETE",
+    "route": "/api/members/:id",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "DELETE",
+    "route": "/api/members/:id",
+    "status": 409,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/audit",
+    "status": 200,
+    "shape": { "events": [], "page": "number", "pages": "number", "total": "number" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/audit",
+    "status": 200,
+    "shape": {
+      "events": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "action": "string",
+          "actorName": "string",
+          "actorRole": "string",
+          "actorUserId": "id",
+          "createdAt": "datetime",
+          "entityId": "string",
+          "entityType": "string",
+          "ip": "string",
+          "meta": { "fields": ["string"] },
+          "summary": "string",
+          "userAgent": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "page": "number",
+      "pages": "number",
+      "total": "number"
+    }
+  },
+  { "method": "GET", "route": "/api/audit", "status": 400, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/dashboard",
+    "status": 200,
+    "shape": {
+      "date": "date",
+      "items": [
+        {
+          "_id": "string",
+          "count": "number",
+          "name": "string",
+          "quantity": "number",
+          "totalAmount": "number",
+          "totalQuantity": "number",
+          "unit": "string"
+        }
+      ],
+      "notifications": { "failed": "number", "sent": "number" },
+      "sales": "number",
+      "sold": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/members",
+    "status": 200,
+    "shape": {
+      "members": [
+        {
+          "createdAt": "datetime",
+          "id": "id",
+          "lastUsedAt": "datetime",
+          "name": "string",
+          "phone": "string",
+          "role": "string",
+          "self": "boolean",
+          "status": "string",
+          "userId": "id"
+        }
+      ]
+    }
+  },
+  { "method": "GET", "route": "/api/members", "status": 403, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/reports/sales", "status": 403, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/transactions",
+    "status": 200,
+    "shape": {
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number",
+      "transactions": []
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/transactions",
+    "status": 200,
+    "shape": {
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number",
+      "transactions": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerName": "string",
+          "customerPhone": "string",
+          "itemType": "string",
+          "paymentMode": "string",
+          "quantity": "number",
+          "status": "string",
+          "tankChanges": [],
+          "unit": "string",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  { "method": "GET", "route": "/api/transactions", "status": 401, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/transactions/:id",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/transactions/:id/receipt.pdf",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/dealer",
+    "status": 200,
+    "shape": {
+      "businessName": "string",
+      "config": {
+        "itemTypes": ["string"],
+        "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+      },
+      "id": "id",
+      "language": "string",
+      "verticalType": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/members/:id",
+    "status": 200,
+    "shape": {
+      "createdAt": "datetime",
+      "id": "id",
+      "lastUsedAt": "datetime",
+      "name": "string",
+      "phone": "string",
+      "role": "string",
+      "self": "boolean",
+      "status": "string",
+      "userId": "id"
+    }
+  },
+  { "method": "PATCH", "route": "/api/members/:id", "status": 409, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/auth/accept-invite",
+    "status": 200,
+    "shape": { "ok": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/accept-invite",
+    "status": 400,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/login",
+    "status": 200,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "deliveries": "boolean",
+          "pumpReports": "boolean",
+          "shifts": "boolean",
+          "tanks": "boolean",
+          "vehicleNumber": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "deliveries": "boolean",
+            "pumpReports": "boolean",
+            "shifts": "boolean",
+            "tanks": "boolean",
+            "vehicleNumber": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  { "method": "POST", "route": "/api/auth/refresh", "status": 401, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/auth/signup",
+    "status": 201,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "deliveries": "boolean",
+          "pumpReports": "boolean",
+          "shifts": "boolean",
+          "tanks": "boolean",
+          "vehicleNumber": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "CNG": "string", "Diesel": "string", "Petrol": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "deliveries": "boolean",
+            "pumpReports": "boolean",
+            "shifts": "boolean",
+            "tanks": "boolean",
+            "vehicleNumber": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/billing/subscriptions",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/customers/:id/payments",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  { "method": "POST", "route": "/api/inventory", "status": 403, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/members/invite",
+    "status": 201,
+    "shape": {
+      "createdAt": "datetime",
+      "id": "id",
+      "name": "string",
+      "phone": "string",
+      "role": "string",
+      "self": "boolean",
+      "status": "string",
+      "userId": "id"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/members/invite",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "itemType": "string",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "itemType": "string",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 403,
+    "shape": { "error": "string" }
+  }
+]

@@ -1,0 +1,1910 @@
+[
+  {
+    "method": "DELETE",
+    "route": "/api/suppliers/:id",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/customers/:id",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "creditBalance": "number",
+      "creditDays": "null",
+      "creditLimit": "null",
+      "isCreditCustomer": "boolean",
+      "name": "string",
+      "phone": "string",
+      "updatedAt": "datetime",
+      "vehicles": [],
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/customers/:id/ledger",
+    "status": 200,
+    "shape": {
+      "entries": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "affectsBalance": "boolean",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerId": "id",
+          "direction": "string",
+          "note": "string",
+          "paymentMode": "string",
+          "transactionId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "affectsBalance": "boolean",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerId": "id",
+          "direction": "string",
+          "paymentMode": "string",
+          "transactionId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "affectsBalance": "boolean",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerId": "id",
+          "direction": "string",
+          "paymentMode": "string",
+          "type": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/customers/:id/ledger",
+    "status": 200,
+    "shape": {
+      "entries": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "affectsBalance": "boolean",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerId": "id",
+          "direction": "string",
+          "note": "string",
+          "paymentMode": "string",
+          "transactionId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "affectsBalance": "boolean",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "customerId": "id",
+          "direction": "string",
+          "paymentMode": "string",
+          "transactionId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "limit": "number",
+      "page": "number",
+      "pages": "number",
+      "total": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/invoices",
+    "status": 200,
+    "shape": { "invoices": [], "page": "number", "pages": "number", "total": "number" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/invoices",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  { "method": "GET", "route": "/api/invoices", "status": 403, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/invoices/:id",
+    "status": 200,
+    "shape": {
+      "creditNote": {
+        "__v": "number",
+        "_id": "id",
+        "createdAt": "datetime",
+        "invoiceNumber": "string",
+        "issuedAt": "datetime",
+        "issuedBy": "id",
+        "number": "string",
+        "reason": "string",
+        "transactionId": "id",
+        "updatedAt": "datetime",
+        "workspaceId": "string"
+      },
+      "invoice": {
+        "__v": "number",
+        "_id": "id",
+        "advanceApplied": "number",
+        "amount": "number",
+        "charges": [{ "amount": "number", "taxable": "boolean", "type": "string" }],
+        "createdAt": "datetime",
+        "createdBy": "id",
+        "creditAmount": "number",
+        "creditNoteId": "id",
+        "customerId": "id",
+        "customerName": "string",
+        "customerPhone": "string",
+        "invoice": {
+          "issuedAt": "datetime",
+          "placeOfSupply": "string",
+          "recipient": { "name": "string", "phone": "string" },
+          "seller": {
+            "address": "string",
+            "chargeGstRatePercent": "number",
+            "gstin": "string",
+            "invoicePrefix": "string",
+            "legalName": "string",
+            "state": "string",
+            "taxRegistered": "boolean"
+          },
+          "tax": {
+            "cgst": "number",
+            "igst": "number",
+            "roundOff": "number",
+            "roundedTotal": "number",
+            "rows": [
+              {
+                "amount": "number",
+                "cgst": "number",
+                "grade": "string",
+                "gstRatePercent": "number",
+                "hsnCode": "string",
+                "igst": "number",
+                "inventoryId": "id",
+                "itemType": "string",
+                "kind": "string",
+                "lengthFt": "number",
+                "lineAmount": "number",
+                "pieces": "number",
+                "quantity": "number",
+                "ratePerUnit": "number",
+                "sgst": "number",
+                "species": "string",
+                "taxableValue": "number",
+                "thicknessIn": "number",
+                "total": "number",
+                "unit": "string",
+                "widthIn": "number"
+              },
+              {
+                "amount": "number",
+                "cgst": "number",
+                "gstRatePercent": "number",
+                "igst": "number",
+                "kind": "string",
+                "sgst": "number",
+                "taxable": "boolean",
+                "taxableValue": "number",
+                "total": "number",
+                "type": "string"
+              }
+            ],
+            "sgst": "number",
+            "taxableValue": "number",
+            "total": "number"
+          },
+          "type": "string"
+        },
+        "invoiceNumber": "string",
+        "itemType": "string",
+        "lineItems": [
+          {
+            "grade": "string",
+            "gstRatePercent": "number",
+            "hsnCode": "string",
+            "inventoryId": "id",
+            "itemType": "string",
+            "lengthFt": "number",
+            "lineAmount": "number",
+            "pieces": "number",
+            "quantity": "number",
+            "ratePerUnit": "number",
+            "species": "string",
+            "thicknessIn": "number",
+            "unit": "string",
+            "widthIn": "number"
+          }
+        ],
+        "paidAmount": "number",
+        "paymentMode": "string",
+        "quantity": "number",
+        "status": "string",
+        "tankChanges": [],
+        "unit": "string",
+        "updatedAt": "datetime",
+        "voidedAt": "datetime",
+        "voidedBy": "id",
+        "voidedReason": "string",
+        "workspaceId": "string"
+      }
+    }
+  },
+  { "method": "GET", "route": "/api/invoices/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/invoices/:id/pdf",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/purchases",
+    "status": 200,
+    "shape": { "page": "number", "pages": "number", "purchases": [], "total": "number" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/purchases",
+    "status": 200,
+    "shape": {
+      "page": "number",
+      "pages": "number",
+      "purchases": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "charges": [],
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "invoiceDate": "date",
+          "invoiceNumber": "string",
+          "lineItems": [
+            {
+              "grade": "string",
+              "inventoryId": "id",
+              "itemType": "string",
+              "lengthFt": "number",
+              "lineAmount": "number",
+              "pieces": "number",
+              "quantity": "number",
+              "ratePerUnit": "number",
+              "species": "string",
+              "thicknessIn": "number",
+              "unit": "string",
+              "widthIn": "number"
+            }
+          ],
+          "paidAmount": "number",
+          "paymentMode": "string",
+          "status": "string",
+          "supplierId": "id",
+          "supplierName": "string",
+          "total": "number",
+          "updatedAt": "datetime",
+          "voidedAt": "datetime",
+          "voidedBy": "id",
+          "voidedReason": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "total": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/purchases",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  { "method": "GET", "route": "/api/purchases", "status": 403, "shape": { "error": "string" } },
+  { "method": "GET", "route": "/api/purchases/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/reports/gst-summary",
+    "status": 200,
+    "shape": { "notice": "string", "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/gst-summary",
+    "status": 200,
+    "shape": {
+      "notice": "string",
+      "rows": [
+        {
+          "cgst": "number",
+          "hsn": "string",
+          "igst": "number",
+          "month": "string",
+          "rate": "number",
+          "sgst": "number",
+          "taxableValue": "number"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/payables-aging",
+    "status": 200,
+    "shape": { "columns": ["string"], "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/payables-aging",
+    "status": 200,
+    "shape": {
+      "columns": ["string"],
+      "rows": [
+        {
+          "advance": "number",
+          "balance": "number",
+          "days0to30": "number",
+          "days31to60": "number",
+          "days61to90": "number",
+          "days91Plus": "number",
+          "name": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/profit-lite",
+    "status": 200,
+    "shape": { "columns": ["string"], "notice": "string", "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/profit-lite",
+    "status": 200,
+    "shape": {
+      "columns": ["string"],
+      "notice": "string",
+      "rows": [
+        {
+          "estimatedCost": "number",
+          "estimatedProfit": "number",
+          "itemType": "string",
+          "pieces": "number",
+          "quantity": "number",
+          "sales": "number",
+          "unit": "string",
+          "weightedAverageRate": "number"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/receivables-aging",
+    "status": 200,
+    "shape": { "columns": ["string"], "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/receivables-aging",
+    "status": 200,
+    "shape": {
+      "columns": ["string"],
+      "rows": [
+        {
+          "advance": "number",
+          "balance": "number",
+          "days0to30": "number",
+          "days31to60": "number",
+          "days61to90": "number",
+          "days91Plus": "number",
+          "name": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/sales-by-species",
+    "status": 200,
+    "shape": { "columns": ["string"], "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/sales-by-species",
+    "status": 200,
+    "shape": {
+      "columns": ["string"],
+      "rows": [
+        {
+          "pieces": "number",
+          "quantity": "number",
+          "sales": "number",
+          "species": "string",
+          "unit": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/stock",
+    "status": 200,
+    "shape": { "columns": ["string"], "rows": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/stock",
+    "status": 200,
+    "shape": {
+      "columns": ["string"],
+      "rows": [
+        {
+          "grade": "string",
+          "item": "string",
+          "pieces": "number",
+          "quantity": "number",
+          "rate": "number",
+          "species": "string",
+          "unit": "string",
+          "value": "number"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/reports/timber/stock",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  { "method": "GET", "route": "/api/suppliers", "status": 200, "shape": { "suppliers": [] } },
+  {
+    "method": "GET",
+    "route": "/api/suppliers",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  { "method": "GET", "route": "/api/suppliers", "status": 403, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/:id",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "balance": "number",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "name": "string",
+      "openingBalance": "number",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "GET", "route": "/api/suppliers/:id", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/:id/ledger",
+    "status": 200,
+    "shape": {
+      "entries": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "direction": "string",
+          "effectiveAt": "datetime",
+          "purchaseId": "id",
+          "supplierId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "direction": "string",
+          "note": "string",
+          "purchaseId": "id",
+          "supplierId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "direction": "string",
+          "note": "string",
+          "supplierId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "direction": "string",
+          "paymentMode": "string",
+          "purchaseId": "id",
+          "supplierId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        },
+        {
+          "__v": "number",
+          "_id": "id",
+          "amount": "number",
+          "balanceAfter": "number",
+          "createdAt": "datetime",
+          "createdBy": "id",
+          "direction": "string",
+          "paymentMode": "string",
+          "supplierId": "id",
+          "type": "string",
+          "workspaceId": "string"
+        }
+      ],
+      "page": "number",
+      "pages": "number",
+      "supplier": {
+        "__v": "number",
+        "_id": "id",
+        "balance": "number",
+        "createdAt": "datetime",
+        "isActive": "boolean",
+        "name": "string",
+        "openingBalance": "number",
+        "updatedAt": "datetime",
+        "workspaceId": "string"
+      },
+      "total": "number"
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/:id/ledger",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/:id/ledger",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/outstanding",
+    "status": 200,
+    "shape": { "suppliers": [] }
+  },
+  {
+    "method": "GET",
+    "route": "/api/suppliers/outstanding",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  { "method": "GET", "route": "/api/timber/items", "status": 200, "shape": { "items": [] } },
+  {
+    "method": "GET",
+    "route": "/api/timber/items",
+    "status": 200,
+    "shape": {
+      "items": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "createdAt": "datetime",
+          "currentPieces": "number",
+          "currentStock": "number",
+          "grade": "string",
+          "gstRatePercent": "number",
+          "hsnCode": "string",
+          "itemType": "string",
+          "lastPriceUpdate": "datetime",
+          "pricePerUnit": "number",
+          "priceSource": "string",
+          "pricingUnit": "string",
+          "species": "string",
+          "unit": "string",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/timber/items",
+    "status": 200,
+    "shape": {
+      "items": [
+        {
+          "__v": "number",
+          "_id": "id",
+          "createdAt": "datetime",
+          "currentPieces": "number",
+          "currentStock": "number",
+          "grade": "string",
+          "itemType": "string",
+          "lastPriceUpdate": "datetime",
+          "pricePerUnit": "number",
+          "priceSource": "string",
+          "pricingUnit": "string",
+          "species": "string",
+          "unit": "string",
+          "updatedAt": "datetime",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/timber/items",
+    "status": 402,
+    "shape": { "code": "string", "error": "string", "upgradeRequired": "boolean" }
+  },
+  {
+    "method": "GET",
+    "route": "/api/timber/tax-profile",
+    "status": 200,
+    "shape": {
+      "allowAdvances": "boolean",
+      "pricesIncludeTax": "boolean",
+      "profile": {
+        "address": "string",
+        "chargeGstRatePercent": "number",
+        "gstin": "string",
+        "invoicePrefix": "string",
+        "legalName": "string",
+        "state": "string",
+        "taxRegistered": "boolean"
+      },
+      "states": {
+        "10": "string",
+        "11": "string",
+        "12": "string",
+        "13": "string",
+        "14": "string",
+        "15": "string",
+        "16": "string",
+        "17": "string",
+        "18": "string",
+        "19": "string",
+        "20": "string",
+        "21": "string",
+        "22": "string",
+        "23": "string",
+        "24": "string",
+        "25": "string",
+        "26": "string",
+        "27": "string",
+        "28": "string",
+        "29": "string",
+        "30": "string",
+        "31": "string",
+        "32": "string",
+        "33": "string",
+        "34": "string",
+        "35": "string",
+        "36": "string",
+        "37": "string",
+        "38": "string",
+        "97": "string",
+        "99": "string",
+        "01": "string",
+        "02": "string",
+        "03": "string",
+        "04": "string",
+        "05": "string",
+        "06": "string",
+        "07": "string",
+        "08": "string",
+        "09": "string"
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/timber/tax-profile",
+    "status": 200,
+    "shape": {
+      "allowAdvances": "boolean",
+      "pricesIncludeTax": "boolean",
+      "states": {
+        "10": "string",
+        "11": "string",
+        "12": "string",
+        "13": "string",
+        "14": "string",
+        "15": "string",
+        "16": "string",
+        "17": "string",
+        "18": "string",
+        "19": "string",
+        "20": "string",
+        "21": "string",
+        "22": "string",
+        "23": "string",
+        "24": "string",
+        "25": "string",
+        "26": "string",
+        "27": "string",
+        "28": "string",
+        "29": "string",
+        "30": "string",
+        "31": "string",
+        "32": "string",
+        "33": "string",
+        "34": "string",
+        "35": "string",
+        "36": "string",
+        "37": "string",
+        "38": "string",
+        "97": "string",
+        "99": "string",
+        "01": "string",
+        "02": "string",
+        "03": "string",
+        "04": "string",
+        "05": "string",
+        "06": "string",
+        "07": "string",
+        "08": "string",
+        "09": "string"
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/timber/tax-profile",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/dealer",
+    "status": 200,
+    "shape": {
+      "businessName": "string",
+      "config": {
+        "allowAdvances": "boolean",
+        "itemTypes": ["string"],
+        "itemUnits": { "Pine": "string", "Sal": "string", "Teak": "string" }
+      },
+      "id": "id",
+      "language": "string",
+      "verticalType": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/suppliers/:id",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/timber/items/Teak%20A/tax",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "currentPieces": "number",
+      "currentStock": "number",
+      "grade": "string",
+      "gstRatePercent": "number",
+      "hsnCode": "string",
+      "itemType": "string",
+      "lastPriceUpdate": "datetime",
+      "pricePerUnit": "number",
+      "priceSource": "string",
+      "pricingUnit": "string",
+      "species": "string",
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PATCH",
+    "route": "/api/timber/items/Teak%20A/tax",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/signup",
+    "status": 201,
+    "shape": {
+      "account": { "id": "id", "name": "string", "phone": "string" },
+      "dealer": {
+        "billing": {
+          "cancelAtCycleEnd": "boolean",
+          "checkoutPending": "boolean",
+          "graceEndsAt": "null",
+          "planName": "string",
+          "readOnly": "boolean",
+          "status": "string",
+          "trialDaysLeft": "number",
+          "trialEndsAt": "datetime"
+        },
+        "businessName": "string",
+        "config": {
+          "itemTypes": ["string"],
+          "itemUnits": { "Pine": "string", "Sal": "string", "Teak": "string" }
+        },
+        "id": "id",
+        "language": "string",
+        "permissions": ["string"],
+        "role": "string",
+        "taxRegistered": "boolean",
+        "verticalFeatures": {
+          "dimensions": "boolean",
+          "gst": "boolean",
+          "purchases": "boolean",
+          "suppliers": "boolean"
+        },
+        "verticalLabels": { "item": "string", "unit": "string" },
+        "verticalType": "string",
+        "workspaceId": "string"
+      },
+      "permissions": ["string"],
+      "refreshToken": "string",
+      "role": "string",
+      "token": "string",
+      "workspaces": [
+        {
+          "billing": {
+            "cancelAtCycleEnd": "boolean",
+            "checkoutPending": "boolean",
+            "graceEndsAt": "null",
+            "planName": "string",
+            "readOnly": "boolean",
+            "status": "string",
+            "trialDaysLeft": "number",
+            "trialEndsAt": "datetime"
+          },
+          "businessName": "string",
+          "config": {
+            "itemTypes": ["string"],
+            "itemUnits": { "Pine": "string", "Sal": "string", "Teak": "string" }
+          },
+          "id": "id",
+          "language": "string",
+          "permissions": ["string"],
+          "role": "string",
+          "taxRegistered": "boolean",
+          "verticalFeatures": {
+            "dimensions": "boolean",
+            "gst": "boolean",
+            "purchases": "boolean",
+            "suppliers": "boolean"
+          },
+          "verticalLabels": { "item": "string", "unit": "string" },
+          "verticalType": "string",
+          "workspaceId": "string"
+        }
+      ]
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/customers/:id/payments",
+    "status": 201,
+    "shape": {
+      "customer": {
+        "__v": "number",
+        "_id": "id",
+        "createdAt": "datetime",
+        "creditBalance": "number",
+        "creditDays": "null",
+        "creditLimit": "null",
+        "isCreditCustomer": "boolean",
+        "name": "string",
+        "phone": "string",
+        "updatedAt": "datetime",
+        "vehicles": [],
+        "workspaceId": "string"
+      },
+      "entry": {
+        "__v": "number",
+        "_id": "id",
+        "affectsBalance": "boolean",
+        "amount": "number",
+        "balanceAfter": "number",
+        "createdAt": "datetime",
+        "createdBy": "id",
+        "customerId": "id",
+        "direction": "string",
+        "paymentMode": "string",
+        "type": "string",
+        "workspaceId": "string"
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/customers/:id/payments",
+    "status": 409,
+    "shape": { "code": "string", "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/customers/:id/reminder",
+    "status": 202,
+    "shape": { "lastReminderAt": "datetime", "queued": "boolean" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/invoices/:id/credit-note",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "invoiceNumber": "string",
+      "issuedAt": "datetime",
+      "issuedBy": "id",
+      "number": "string",
+      "reason": "string",
+      "transactionId": "id",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/invoices/:id/credit-note",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/invoices/:id/credit-note",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/purchases",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "charges": [],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "invoiceDate": "date",
+      "invoiceNumber": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "status": "string",
+      "supplierId": "id",
+      "supplierName": "string",
+      "total": "number",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/purchases",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "charges": [],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "invoiceDate": "date",
+      "invoiceNumber": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "status": "string",
+      "supplierId": "id",
+      "supplierName": "string",
+      "total": "number",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "POST", "route": "/api/purchases", "status": 404, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/purchases/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "charges": [],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "invoiceDate": "date",
+      "invoiceNumber": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "status": "string",
+      "supplierId": "id",
+      "supplierName": "string",
+      "total": "number",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/purchases/:id/void",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/suppliers",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "balance": "number",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "name": "string",
+      "openingBalance": "number",
+      "phone": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/suppliers",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "balance": "number",
+      "createdAt": "datetime",
+      "isActive": "boolean",
+      "name": "string",
+      "openingBalance": "number",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/suppliers/:id/payments",
+    "status": 201,
+    "shape": {
+      "entry": {
+        "__v": "number",
+        "_id": "id",
+        "amount": "number",
+        "balanceAfter": "number",
+        "createdAt": "datetime",
+        "createdBy": "id",
+        "direction": "string",
+        "paymentMode": "string",
+        "supplierId": "id",
+        "type": "string",
+        "workspaceId": "string"
+      },
+      "supplier": {
+        "__v": "number",
+        "_id": "id",
+        "balance": "number",
+        "createdAt": "datetime",
+        "isActive": "boolean",
+        "name": "string",
+        "openingBalance": "number",
+        "updatedAt": "datetime",
+        "workspaceId": "string"
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/suppliers/:id/payments",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/suppliers/:id/payments",
+    "status": 409,
+    "shape": { "code": "string", "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/timber/items/adjustments",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "currentPieces": "number",
+      "currentStock": "number",
+      "grade": "string",
+      "itemType": "string",
+      "lastPriceUpdate": "datetime",
+      "pricePerUnit": "number",
+      "priceSource": "string",
+      "pricingUnit": "string",
+      "species": "string",
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/timber/items/adjustments",
+    "status": 404,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/timber/sale-quote",
+    "status": 200,
+    "shape": {
+      "amount": "number",
+      "lineItems": [
+        {
+          "grade": "string",
+          "gstRatePercent": "number",
+          "hsnCode": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "placeOfSupply": "string",
+      "recipient": { "name": "string", "phone": "string" },
+      "seller": {
+        "address": "string",
+        "chargeGstRatePercent": "number",
+        "gstin": "string",
+        "invoicePrefix": "string",
+        "legalName": "string",
+        "state": "string",
+        "taxRegistered": "boolean"
+      },
+      "tax": {
+        "cgst": "number",
+        "igst": "number",
+        "roundOff": "number",
+        "roundedTotal": "number",
+        "rows": [
+          {
+            "amount": "number",
+            "cgst": "number",
+            "grade": "string",
+            "gstRatePercent": "number",
+            "hsnCode": "string",
+            "igst": "number",
+            "inventoryId": "id",
+            "itemType": "string",
+            "kind": "string",
+            "lengthFt": "number",
+            "lineAmount": "number",
+            "pieces": "number",
+            "quantity": "number",
+            "ratePerUnit": "number",
+            "sgst": "number",
+            "species": "string",
+            "taxableValue": "number",
+            "thicknessIn": "number",
+            "total": "number",
+            "unit": "string",
+            "widthIn": "number"
+          },
+          {
+            "amount": "number",
+            "cgst": "number",
+            "gstRatePercent": "number",
+            "igst": "number",
+            "kind": "string",
+            "sgst": "number",
+            "taxable": "boolean",
+            "taxableValue": "number",
+            "total": "number",
+            "type": "string"
+          }
+        ],
+        "sgst": "number",
+        "taxableValue": "number",
+        "total": "number"
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/timber/sale-quote",
+    "status": 400,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "advanceApplied": "number",
+      "amount": "number",
+      "charges": [],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "recipient": { "name": "string", "phone": "string" },
+        "tax": "null",
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "advanceApplied": "number",
+      "amount": "number",
+      "charges": [{ "amount": "number", "taxable": "boolean", "type": "string" }],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "placeOfSupply": "string",
+        "recipient": { "name": "string", "phone": "string" },
+        "seller": {
+          "address": "string",
+          "chargeGstRatePercent": "number",
+          "gstin": "string",
+          "invoicePrefix": "string",
+          "legalName": "string",
+          "state": "string",
+          "taxRegistered": "boolean"
+        },
+        "tax": {
+          "cgst": "number",
+          "igst": "number",
+          "roundOff": "number",
+          "roundedTotal": "number",
+          "rows": [
+            {
+              "amount": "number",
+              "cgst": "number",
+              "grade": "string",
+              "gstRatePercent": "number",
+              "hsnCode": "string",
+              "igst": "number",
+              "inventoryId": "id",
+              "itemType": "string",
+              "kind": "string",
+              "lengthFt": "number",
+              "lineAmount": "number",
+              "pieces": "number",
+              "quantity": "number",
+              "ratePerUnit": "number",
+              "sgst": "number",
+              "species": "string",
+              "taxableValue": "number",
+              "thicknessIn": "number",
+              "total": "number",
+              "unit": "string",
+              "widthIn": "number"
+            },
+            {
+              "amount": "number",
+              "cgst": "number",
+              "gstRatePercent": "number",
+              "igst": "number",
+              "kind": "string",
+              "sgst": "number",
+              "taxable": "boolean",
+              "taxableValue": "number",
+              "total": "number",
+              "type": "string"
+            }
+          ],
+          "sgst": "number",
+          "taxableValue": "number",
+          "total": "number"
+        },
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "gstRatePercent": "number",
+          "hsnCode": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "charges": [{ "amount": "number", "taxable": "boolean", "type": "string" }],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "placeOfSupply": "string",
+        "recipient": { "name": "string", "phone": "string" },
+        "seller": {
+          "address": "string",
+          "chargeGstRatePercent": "number",
+          "gstin": "string",
+          "invoicePrefix": "string",
+          "legalName": "string",
+          "state": "string",
+          "taxRegistered": "boolean"
+        },
+        "tax": {
+          "cgst": "number",
+          "igst": "number",
+          "roundOff": "number",
+          "roundedTotal": "number",
+          "rows": [
+            {
+              "amount": "number",
+              "cgst": "number",
+              "grade": "string",
+              "gstRatePercent": "number",
+              "hsnCode": "string",
+              "igst": "number",
+              "inventoryId": "id",
+              "itemType": "string",
+              "kind": "string",
+              "lengthFt": "number",
+              "lineAmount": "number",
+              "pieces": "number",
+              "quantity": "number",
+              "ratePerUnit": "number",
+              "sgst": "number",
+              "species": "string",
+              "taxableValue": "number",
+              "thicknessIn": "number",
+              "total": "number",
+              "unit": "string",
+              "widthIn": "number"
+            },
+            {
+              "amount": "number",
+              "cgst": "number",
+              "gstRatePercent": "number",
+              "igst": "number",
+              "kind": "string",
+              "sgst": "number",
+              "taxable": "boolean",
+              "taxableValue": "number",
+              "total": "number",
+              "type": "string"
+            }
+          ],
+          "sgst": "number",
+          "taxableValue": "number",
+          "total": "number"
+        },
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "gstRatePercent": "number",
+          "hsnCode": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions",
+    "status": 201,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "charges": [{ "amount": "number", "taxable": "boolean", "type": "string" }],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "recipient": { "name": "string", "phone": "string" },
+        "tax": "null",
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  { "method": "POST", "route": "/api/transactions", "status": 400, "shape": { "error": "string" } },
+  { "method": "POST", "route": "/api/transactions", "status": 500, "shape": { "error": "string" } },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "advanceApplied": "number",
+      "amount": "number",
+      "charges": [],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerId": "id",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "recipient": { "name": "string", "phone": "string" },
+        "tax": "null",
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "amount": "number",
+      "charges": [{ "amount": "number", "taxable": "boolean", "type": "string" }],
+      "createdAt": "datetime",
+      "createdBy": "id",
+      "creditAmount": "number",
+      "customerName": "string",
+      "customerPhone": "string",
+      "invoice": {
+        "issuedAt": "datetime",
+        "recipient": { "name": "string", "phone": "string" },
+        "tax": "null",
+        "type": "string"
+      },
+      "invoiceNumber": "string",
+      "itemType": "string",
+      "lineItems": [
+        {
+          "grade": "string",
+          "inventoryId": "id",
+          "itemType": "string",
+          "lengthFt": "number",
+          "lineAmount": "number",
+          "pieces": "number",
+          "quantity": "number",
+          "ratePerUnit": "number",
+          "species": "string",
+          "thicknessIn": "number",
+          "unit": "string",
+          "widthIn": "number"
+        }
+      ],
+      "paidAmount": "number",
+      "paymentMode": "string",
+      "quantity": "number",
+      "status": "string",
+      "tankChanges": [],
+      "unit": "string",
+      "updatedAt": "datetime",
+      "voidedAt": "datetime",
+      "voidedBy": "id",
+      "voidedReason": "string",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 403,
+    "shape": { "error": "string" }
+  },
+  {
+    "method": "POST",
+    "route": "/api/transactions/:id/void",
+    "status": 409,
+    "shape": { "code": "string", "error": "string" }
+  },
+  {
+    "method": "PUT",
+    "route": "/api/timber/items",
+    "status": 200,
+    "shape": {
+      "__v": "number",
+      "_id": "id",
+      "createdAt": "datetime",
+      "currentPieces": "number",
+      "currentStock": "number",
+      "grade": "string",
+      "itemType": "string",
+      "lastPriceUpdate": "datetime",
+      "pricePerUnit": "number",
+      "priceSource": "string",
+      "pricingUnit": "string",
+      "species": "string",
+      "unit": "string",
+      "updatedAt": "datetime",
+      "workspaceId": "string"
+    }
+  },
+  {
+    "method": "PUT",
+    "route": "/api/timber/tax-profile",
+    "status": 200,
+    "shape": {
+      "config": {
+        "itemTypes": ["string"],
+        "itemUnits": { "Pine": "string", "Sal": "string", "Teak": "string" },
+        "pricesIncludeTax": "boolean"
+      },
+      "pricesIncludeTax": "boolean",
+      "profile": {
+        "address": "string",
+        "chargeGstRatePercent": "number",
+        "gstin": "string",
+        "invoicePrefix": "string",
+        "legalName": "string",
+        "state": "string",
+        "taxRegistered": "boolean"
+      },
+      "states": {
+        "10": "string",
+        "11": "string",
+        "12": "string",
+        "13": "string",
+        "14": "string",
+        "15": "string",
+        "16": "string",
+        "17": "string",
+        "18": "string",
+        "19": "string",
+        "20": "string",
+        "21": "string",
+        "22": "string",
+        "23": "string",
+        "24": "string",
+        "25": "string",
+        "26": "string",
+        "27": "string",
+        "28": "string",
+        "29": "string",
+        "30": "string",
+        "31": "string",
+        "32": "string",
+        "33": "string",
+        "34": "string",
+        "35": "string",
+        "36": "string",
+        "37": "string",
+        "38": "string",
+        "97": "string",
+        "99": "string",
+        "01": "string",
+        "02": "string",
+        "03": "string",
+        "04": "string",
+        "05": "string",
+        "06": "string",
+        "07": "string",
+        "08": "string",
+        "09": "string"
+      }
+    }
+  },
+  {
+    "method": "PUT",
+    "route": "/api/timber/tax-profile",
+    "status": 200,
+    "shape": {
+      "config": {
+        "itemTypes": ["string"],
+        "itemUnits": { "Pine": "string", "Sal": "string", "Teak": "string" },
+        "pricesIncludeTax": "boolean"
+      },
+      "pricesIncludeTax": "boolean",
+      "profile": { "invoicePrefix": "string", "taxRegistered": "boolean" },
+      "states": {
+        "10": "string",
+        "11": "string",
+        "12": "string",
+        "13": "string",
+        "14": "string",
+        "15": "string",
+        "16": "string",
+        "17": "string",
+        "18": "string",
+        "19": "string",
+        "20": "string",
+        "21": "string",
+        "22": "string",
+        "23": "string",
+        "24": "string",
+        "25": "string",
+        "26": "string",
+        "27": "string",
+        "28": "string",
+        "29": "string",
+        "30": "string",
+        "31": "string",
+        "32": "string",
+        "33": "string",
+        "34": "string",
+        "35": "string",
+        "36": "string",
+        "37": "string",
+        "38": "string",
+        "97": "string",
+        "99": "string",
+        "01": "string",
+        "02": "string",
+        "03": "string",
+        "04": "string",
+        "05": "string",
+        "06": "string",
+        "07": "string",
+        "08": "string",
+        "09": "string"
+      }
+    }
+  },
+  {
+    "method": "PUT",
+    "route": "/api/timber/tax-profile",
+    "status": 400,
+    "shape": { "error": "string", "issues": [{ "message": "string", "path": "string" }] }
+  }
+]
