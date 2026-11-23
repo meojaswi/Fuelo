@@ -1,43 +1,99 @@
 const Dealer = require("../models/dealer.model");
+const UserAccount = require("../models/userAccount.model");
 const authService = require("../services/auth.service");
 const { WorkspaceSubscription } = require("../models/subscription.model");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
+
+const defaultItemTypes = {
+  fuel: ["Diesel", "Petrol", "CNG"],
+  timber: ["Teak", "Sal", "Pine"],
+  construction: ["Cement", "Steel", "Sand"],
+  kirana: [],
+  other: [],
+};
+
+function createWorkspaceId() {
+  return `ws_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+}
+
+function serializeDealer(dealer) {
+  return {
+    id: dealer._id,
+    workspaceId: dealer.workspaceId,
+    businessName: dealer.businessName,
+    verticalType: dealer.verticalType,
+    config: dealer.config,
+  };
+}
+
+function sessionFor(dealer, dealers) {
+  return {
+    token: authService.signToken(dealer),
+    dealer: serializeDealer(dealer),
+    workspaces: dealers.map(serializeDealer),
+  };
+}
+
+async function signup(req, res) {
+  const { phone, password, businessName, verticalType } = req.body;
+  const existing = await Dealer.exists({ phone }).setOptions({ skipWorkspaceGuard: true });
+  const conflict = () =>
+    res.status(409).json({ error: "An account already exists for this phone" });
+  if (existing) return conflict();
+
+  const passwordHash = await authService.hashPassword(password);
+  const dealer = new Dealer({
+    workspaceId: createWorkspaceId(),
+    businessName,
+    verticalType,
+    phone,
+    passwordHash,
+    config: { itemTypes: defaultItemTypes[verticalType] },
+  });
+
+  // Reserve the unique phone before creating the workspace so concurrent
+  // signups cannot both succeed.
+  let account;
+  try {
+    account = await UserAccount.create({ phone, passwordHash, dealerIds: [dealer._id] });
+  } catch (err) {
+    if (err.code === 11000) return conflict();
+    throw err;
+  }
+
+  try {
+    await dealer.save();
+  } catch (err) {
+    await UserAccount.deleteOne({ _id: account._id });
+    throw err;
+  }
+
+  res.status(201).json(sessionFor(dealer, [dealer]));
+}
 
 async function login(req, res) {
   const { phone, password } = req.body;
 
-  const dealers = await Dealer.find({ phone, isActive: true }).setOptions({
-    skipWorkspaceGuard: true,
-  });
+  const dealers = await Dealer.find({ phone, isActive: true })
+    .setOptions({ skipWorkspaceGuard: true })
+    .sort({ createdAt: 1, _id: 1 });
+  if (!dealers.length) return res.status(401).json({ error: "Invalid phone or password" });
 
-  if (!dealers.length) {
-    return res.status(401).json({ error: "Invalid phone or password" });
+  const account = await UserAccount.findOne({ phone });
+  if (account) {
+    if (await authService.verifyPassword(password, account.passwordHash)) {
+      return res.json(sessionFor(dealers[0], dealers));
+    }
+  } else {
+    // Existing phone accounts can have different hashes across workspaces.
+    for (const dealer of dealers) {
+      if (await authService.verifyPassword(password, dealer.passwordHash)) {
+        return res.json(sessionFor(dealers[0], dealers));
+      }
+    }
   }
 
-  // Assuming password is the same across all workspaces for the phone
-  const valid = await authService.verifyPassword(password, dealers[0].passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: "Invalid phone or password" });
-  }
-
-  const dealer = dealers[0];
-
-  const token = authService.signToken(dealer);
-  res.json({
-    token,
-    dealer: {
-      id: dealer._id,
-      workspaceId: dealer.workspaceId,
-      businessName: dealer.businessName,
-      verticalType: dealer.verticalType,
-    },
-    workspaces: dealers.map((d) => ({
-      id: d._id,
-      workspaceId: d.workspaceId,
-      businessName: d.businessName,
-      verticalType: d.verticalType,
-    })),
-  });
+  return res.status(401).json({ error: "Invalid phone or password" });
 }
 
 async function switchWorkspace(req, res) {
@@ -57,23 +113,7 @@ async function switchWorkspace(req, res) {
   const dealers = await Dealer.find({ phone: currentDealer.phone, isActive: true }).setOptions({
     skipWorkspaceGuard: true,
   });
-  const token = authService.signToken(targetDealer);
-
-  res.json({
-    token,
-    dealer: {
-      id: targetDealer._id,
-      workspaceId: targetDealer.workspaceId,
-      businessName: targetDealer.businessName,
-      verticalType: targetDealer.verticalType,
-    },
-    workspaces: dealers.map((d) => ({
-      id: d._id,
-      workspaceId: d.workspaceId,
-      businessName: d.businessName,
-      verticalType: d.verticalType,
-    })),
-  });
+  res.json(sessionFor(targetDealer, dealers));
 }
 
 async function createWorkspace(req, res) {
@@ -108,7 +148,7 @@ async function createWorkspace(req, res) {
     }
   }
 
-  const workspaceId = `ws_${uuidv4().replace(/-/g, "").slice(0, 12)}`;
+  const workspaceId = createWorkspaceId();
 
   const newDealer = new Dealer({
     workspaceId,
@@ -132,6 +172,8 @@ async function deleteWorkspace(req, res) {
   const currentDealer = await Dealer.findById(req.user.dealerId).setOptions({
     skipWorkspaceGuard: true,
   });
+
+  if (!currentDealer) return res.status(401).json({ error: "Unauthorized" });
 
   if (currentDealer.workspaceId === workspaceId) {
     return res
@@ -161,12 +203,19 @@ async function updatePassword(req, res) {
   });
   if (!currentDealer) return res.status(401).json({ error: "Unauthorized" });
 
-  const valid = await authService.verifyPassword(currentPassword, currentDealer.passwordHash);
+  const account = await UserAccount.findOne({ phone: currentDealer.phone });
+  const valid = await authService.verifyPassword(
+    currentPassword,
+    account?.passwordHash ?? currentDealer.passwordHash
+  );
   if (!valid) {
     return res.status(401).json({ error: "Incorrect current password" });
   }
 
   const newHash = await authService.hashPassword(newPassword);
+
+  if (account)
+    await UserAccount.updateOne({ _id: account._id }, { $set: { passwordHash: newHash } });
 
   // Update password for all workspaces tied to this phone
   await Dealer.updateMany(
@@ -177,4 +226,11 @@ async function updatePassword(req, res) {
   res.json({ ok: true });
 }
 
-module.exports = { login, switchWorkspace, createWorkspace, deleteWorkspace, updatePassword };
+module.exports = {
+  signup,
+  login,
+  switchWorkspace,
+  createWorkspace,
+  deleteWorkspace,
+  updatePassword,
+};

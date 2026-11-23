@@ -16,7 +16,10 @@ export default function DailySummaryCard({ summary }) {
           </span>
         </div>
         <div className="mt-8 grid gap-6 sm:grid-cols-3">
-          <Metric label="Opening stock" value={formatQuantity(summary?.openingStock)} />
+          <Metric
+            label="Opening stock"
+            value={summary?.openingStock == null ? "—" : formatQuantity(summary.openingStock)}
+          />
           <Metric label="Dispensed / sold" value={formatQuantity(summary?.sold)} />
           <Metric label="Today's sales" value={formatCurrency(sales)} />
         </div>

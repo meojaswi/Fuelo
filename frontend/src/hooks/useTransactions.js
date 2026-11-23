@@ -8,10 +8,11 @@ export function useTransactions(params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const query = JSON.stringify(params);
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await listTransactions(params);
+      const d = await listTransactions(JSON.parse(query));
       setData({
         items: d.items || d.transactions || [],
         pages: d.pages || 1,
@@ -24,11 +25,12 @@ export function useTransactions(params = {}) {
     } finally {
       setLoading(false);
     }
-  }, [JSON.stringify(params), user?.workspaceId]);
+  }, [query]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
-  }, [refresh]);
+  }, [refresh, user?.workspaceId]);
 
   return { ...data, loading, error, refresh };
 }
@@ -39,6 +41,7 @@ export function useTransaction(id) {
   useEffect(() => {
     getTransaction(id)
       .then(setTransaction)
+      .catch(() => setTransaction(null))
       .finally(() => setLoading(false));
   }, [id]);
   return { transaction, loading };

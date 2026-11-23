@@ -8,8 +8,8 @@ const logger = require("../utils/logger");
  * saved — decouples request latency from Twilio's response time and gives
  * retries + an audit trail for free.
  */
-async function enqueue({ workspaceId, transactionId, channel, toPhone, body }) {
-  return MessageJob.create({ workspaceId, transactionId, channel, toPhone, body });
+async function enqueue({ workspaceId, transactionId, channel, toPhone, body }, { session } = {}) {
+  return new MessageJob({ workspaceId, transactionId, channel, toPhone, body }).save({ session });
 }
 
 /**

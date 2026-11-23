@@ -3,7 +3,7 @@ import { autocompleteCustomers } from "../api/customers.api";
 export function useCustomerAutocomplete(q) {
   const [data, setData] = useState([]);
   useEffect(() => {
-    if (!q || q.length < 2) return setData([]);
+    if (!q || q.length < 2) return;
     const t = setTimeout(
       () =>
         autocompleteCustomers(q)
@@ -13,5 +13,5 @@ export function useCustomerAutocomplete(q) {
     );
     return () => clearTimeout(t);
   }, [q]);
-  return data;
+  return q?.length >= 2 ? data : [];
 }

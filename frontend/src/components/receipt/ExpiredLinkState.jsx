@@ -1,6 +1,6 @@
 export default function ExpiredLinkState() {
   return (
-    <State title="Receipt link expired" text="This one-time receipt is no longer available." />
+    <State title="Receipt link expired" text="Ask the business for a new receipt link." />
   );
 }
 function State({ title, text }) {

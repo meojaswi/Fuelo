@@ -1,7 +1,7 @@
 const Dealer = require("../models/dealer.model");
 
 async function updateDealer(req, res) {
-  const { businessName, itemTypes } = req.body;
+  const { businessName, itemTypes, allowNegativeStock } = req.body;
   const updates = {};
 
   if (businessName) {
@@ -11,6 +11,13 @@ async function updateDealer(req, res) {
   // Update item types if provided
   if (itemTypes && Array.isArray(itemTypes)) {
     updates["config.itemTypes"] = itemTypes;
+  }
+
+  if (allowNegativeStock !== undefined) {
+    if (typeof allowNegativeStock !== "boolean") {
+      return res.status(400).json({ error: "allowNegativeStock must be a boolean" });
+    }
+    updates["config.allowNegativeStock"] = allowNegativeStock;
   }
 
   if (Object.keys(updates).length === 0) {

@@ -1,4 +1,4 @@
-require("dotenv").config();
+if (process.env.NODE_ENV !== "test") require("dotenv").config();
 
 const required = ["MONGO_URI", "JWT_SECRET"];
 
@@ -9,8 +9,25 @@ for (const key of required) {
   }
 }
 
+const nodeEnv = process.env.NODE_ENV || "development";
+if (nodeEnv === "production" && process.env.JWT_SECRET.length < 32) {
+  throw new Error("JWT_SECRET must be at least 32 characters in production");
+}
+
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? "0");
+if (!Number.isSafeInteger(trustProxyHops) || trustProxyHops < 0) {
+  throw new Error("TRUST_PROXY_HOPS must be a non-negative integer");
+}
+
 module.exports = {
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv,
+  trustProxyHops,
+  corsOrigins: (
+    process.env.CORS_ORIGINS ?? (nodeEnv === "development" ? "http://localhost:5173" : "")
+  )
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   port: parseInt(process.env.PORT || "8000", 10),
 
   mongoUri: process.env.MONGO_URI,

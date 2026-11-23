@@ -4,9 +4,9 @@
  * at this stage; AI messaging is a parked v2 idea).
  */
 
-function buildTransactionReceipt(tx) {
+function buildTransactionReceipt(tx, businessName) {
   return (
-    `Satyadev Workspace\n` +
+    `${businessName}\n` +
     `${tx.customerName}, aapka transaction record:\n` +
     `${tx.itemType}: ${tx.quantity} ${tx.unit}\n` +
     `Amount: ₹${tx.amount}\n` +
@@ -20,4 +20,8 @@ function buildEndOfDaySummary({ workspaceName, date, lines, totalAmount }) {
   return `${workspaceName} — Daily Summary (${date})\n` + `${body}\n` + `Total: ₹${totalAmount}`;
 }
 
-module.exports = { buildTransactionReceipt, buildEndOfDaySummary };
+function buildPaymentReceipt({ businessName, amount, remainingBalance }) {
+  return `${businessName}\nPayment received: ₹${amount.toFixed(2)}\nRemaining balance: ₹${remainingBalance.toFixed(2)}\nDhanyawad!`;
+}
+
+module.exports = { buildTransactionReceipt, buildEndOfDaySummary, buildPaymentReceipt };

@@ -16,7 +16,7 @@ const PLANS = [
       "WhatsApp receipts",
       "1 workspace, 1 login",
       "Daily summary message",
-      "One-time share links",
+      "Expiring receipt links",
     ],
   },
   {
@@ -165,7 +165,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mx-auto mt-10 max-w-lg animate-fade-up text-center font-mono text-[11px] text-white/30 [animation-delay:700ms]">
-            Prices exclude GST. Message costs beyond your plan's cap are billed at actuals.
+            Prices exclude GST. Message costs beyond your plan&apos;s cap are billed at actuals.
           </p>
         </div>
       </main>

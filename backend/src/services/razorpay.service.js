@@ -1,13 +1,18 @@
 const Razorpay = require("razorpay");
 const env = require("../config/env");
 
-const razorpay = new Razorpay({
-  key_id: env.razorpay.keyId,
-  key_secret: env.razorpay.keySecret,
-});
+let razorpay;
+
+function getClient() {
+  razorpay ??= new Razorpay({
+    key_id: env.razorpay.keyId,
+    key_secret: env.razorpay.keySecret,
+  });
+  return razorpay;
+}
 
 async function createSubscription({ razorpayPlanId, totalCount = 12, customerNotify = 1 }) {
-  return razorpay.subscriptions.create({
+  return getClient().subscriptions.create({
     plan_id: razorpayPlanId,
     total_count: totalCount, // billing cycles, e.g. 12 for a yearly commitment on monthly billing
     customer_notify: customerNotify,
@@ -22,7 +27,7 @@ async function createSubscription({ razorpayPlanId, totalCount = 12, customerNot
 async function transferShare({ paymentId, linkedAccountId, amountInPaise, sharePercent }) {
   const shareAmount = Math.round((amountInPaise * sharePercent) / 100);
 
-  return razorpay.payments.transfer(paymentId, {
+  return getClient().payments.transfer(paymentId, {
     transfers: [
       {
         account: linkedAccountId,
@@ -34,4 +39,4 @@ async function transferShare({ paymentId, linkedAccountId, amountInPaise, shareP
   });
 }
 
-module.exports = { razorpay, createSubscription, transferShare };
+module.exports = { createSubscription, transferShare };

@@ -1,86 +1,76 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { loginRequest } from "../api/auth.api";
+import { createContext, useContext, useState } from "react";
+import { loginRequest, signupRequest } from "../api/auth.api";
+
 const C = createContext(null);
+
+function readSessionValue(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem("fuelo_token"));
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("fuelo_user"));
-    } catch {
-      return null;
-    }
-  });
-  const [workspaces, setWorkspaces] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("fuelo_workspaces")) || [];
-    } catch {
-      return [];
-    }
-  });
+  const [user, setUser] = useState(() => readSessionValue("fuelo_user", null));
+  const [workspaces, setWorkspaces] = useState(() => readSessionValue("fuelo_workspaces", []));
   const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    token ? localStorage.setItem("fuelo_token", token) : localStorage.removeItem("fuelo_token");
-  }, [token]);
-  async function login(phone, password) {
+
+  function updateSession({ token: nextToken, dealer, workspaces: nextWorkspaces }) {
+    if (nextToken) {
+      localStorage.setItem("fuelo_token", nextToken);
+      setToken(nextToken);
+    }
+    if (dealer) {
+      const nextUser = user?.workspaceId === dealer.workspaceId ? { ...user, ...dealer } : dealer;
+      localStorage.setItem("fuelo_user", JSON.stringify(nextUser));
+      setUser(nextUser);
+    }
+    if (nextWorkspaces || dealer) {
+      const list =
+        nextWorkspaces ??
+        workspaces.map((ws) => (ws.workspaceId === dealer.workspaceId ? { ...ws, ...dealer } : ws));
+      localStorage.setItem("fuelo_workspaces", JSON.stringify(list));
+      setWorkspaces(list);
+    }
+  }
+
+  async function authenticate(request, payload) {
     setLoading(true);
     try {
-      const d = await loginRequest({ phone, password });
-      const t = d.token || d.accessToken;
-      if (!t) throw Error("No JWT returned");
-      setToken(t);
-      const u = d.user || d.client || d.dealer || null;
-      setUser(u);
-      if (u) localStorage.setItem("fuelo_user", JSON.stringify(u));
-
-      if (d.workspaces) {
-        setWorkspaces(d.workspaces);
-        localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
-      }
-
-      return d;
+      const session = await request(payload);
+      updateSession(session);
+      return session;
     } finally {
       setLoading(false);
     }
   }
 
-  function updateSession(d) {
-    if (d.token) setToken(d.token);
-
-    if (d.dealer) {
-      const nextUser = { ...(user || {}), ...d.dealer };
-      setUser(nextUser);
-      localStorage.setItem("fuelo_user", JSON.stringify(nextUser));
-    }
-
-    if (d.workspaces) {
-      setWorkspaces(d.workspaces);
-      localStorage.setItem("fuelo_workspaces", JSON.stringify(d.workspaces));
-    } else if (d.dealer && workspaces.length) {
-      const nextWorkspaces = workspaces.map((ws) =>
-        ws.workspaceId === d.dealer.workspaceId ? { ...ws, ...d.dealer } : ws
-      );
-      setWorkspaces(nextWorkspaces);
-      localStorage.setItem("fuelo_workspaces", JSON.stringify(nextWorkspaces));
-    }
+  function login(phone, password) {
+    return authenticate(loginRequest, { phone, password });
   }
+
+  function signup(payload) {
+    return authenticate(signupRequest, payload);
+  }
+
   function logout() {
+    localStorage.removeItem("fuelo_token");
+    localStorage.removeItem("fuelo_user");
+    localStorage.removeItem("fuelo_workspaces");
     setToken(null);
     setUser(null);
     setWorkspaces([]);
-    localStorage.removeItem("fuelo_user");
-    localStorage.removeItem("fuelo_workspaces");
   }
+
   return (
-    <C.Provider
-      value={useMemo(
-        () => ({ token, user, workspaces, loading, login, logout, updateSession }),
-        [token, user, workspaces, loading]
-      )}
-    >
+    <C.Provider value={{ token, user, workspaces, loading, login, signup, logout, updateSession }}>
       {children}
     </C.Provider>
   );
 }
+
 export function useAuth() {
   return useContext(C);
 }

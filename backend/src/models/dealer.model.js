@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { requireWorkspaceScope } = require("../middleware/workspaceScope.middleware");
 
 // A "dealer" is the login user for a workspace. workspace_id ties every other
 // collection to this — config-driven, not business-type-driven.
@@ -21,5 +22,7 @@ const dealerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+dealerSchema.plugin(requireWorkspaceScope);
 
 module.exports = mongoose.model("Dealer", dealerSchema);

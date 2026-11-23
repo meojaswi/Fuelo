@@ -13,6 +13,7 @@ export default function TransactionCard({ transaction: t }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">{t.customerName || "Walk-in"}</span>
         <span className="font-mono text-[10px] text-slate-400">
+          {t.status === "voided" ? "Voided · " : ""}
           {t.itemType} · {formatDate(t.createdAt || t.date, { day: "2-digit", month: "short" })}
         </span>
       </span>

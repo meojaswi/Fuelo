@@ -44,8 +44,14 @@ export default function DashboardPage() {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="mono-label">Inventory pulse</p>
-              <h3 className="mt-1 font-bold">Today's movement</h3>
+              <h3 className="mt-1 font-bold">Today&apos;s movement</h3>
             </div>
+            <Link
+              to="/inventory"
+              className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+            >
+              View inventory
+            </Link>
           </div>
           <div className="panel p-5">
             {(summary?.items || []).map((i) => (

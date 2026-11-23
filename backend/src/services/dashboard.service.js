@@ -19,9 +19,16 @@ async function getDailySummary(workspaceId, date = new Date()) {
     {
       $group: {
         _id: "$itemType",
-        totalQuantity: { $sum: "$quantity" },
-        totalAmount: { $sum: "$amount" },
+        unit: { $first: "$unit" },
+        totalQuantity: { $sum: { $toDecimal: "$quantity" } },
+        totalAmount: { $sum: { $toDecimal: "$amount" } },
         count: { $sum: 1 },
+      },
+    },
+    {
+      $set: {
+        totalQuantity: { $toDouble: "$totalQuantity" },
+        totalAmount: { $toDouble: { $round: ["$totalAmount", 2] } },
       },
     },
   ]);

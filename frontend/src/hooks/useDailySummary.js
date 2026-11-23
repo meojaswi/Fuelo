@@ -9,11 +9,16 @@ export function useDailySummary() {
 
   useEffect(() => {
     let active = true;
+    // Keep the loading indicator in sync with workspace changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
 
     getDailySummary()
       .then((data) => {
         if (active) setSummary(data);
+      })
+      .catch(() => {
+        if (active) setSummary(null);
       })
       .finally(() => {
         if (active) setLoading(false);

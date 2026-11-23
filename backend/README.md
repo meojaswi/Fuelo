@@ -1,50 +1,38 @@
-# Fuelo Backend (Node/Express)
+# Fuelo backend
 
-Config-driven, multi-vertical WhatsApp invoicing & credit-tracking backend.
-Every tenant-scoped collection carries `workspaceId`; business-type logic
-lives in `Dealer.config`, not in hardcoded route branches.
+Fuelo uses Express and MongoDB. Use Node 22 and start a local MongoDB instance before running the API.
 
-## Setup
-
-```bash
-npm install
-cp .env.example .env   # fill in Mongo URI, JWT secret, Twilio, Razorpay
+```sh
+npm ci
+cp .env.example .env
 npm run dev
+npm test
 ```
 
-## Key architectural patterns baked into this skeleton
+The default API base URL is `http://localhost:8000/api`. Health checks are available at `/health` and `/api/health`. Set the frontend's `VITE_API_BASE_URL` to the API base URL. Authenticated routes use the session's bearer token. Public receipts use `GET /api/public/receipts/:token`, and the legacy `/links` routes remain available. Razorpay can still send callbacks to `/billing/webhook`.
 
-- **Workspace isolation at the query layer, not just the route layer.**
-  `middleware/workspaceScope.middleware.js` exports a Mongoose plugin
-  (`requireWorkspaceScope`) applied to every tenant-scoped model. Any
-  find/update/delete without a `workspaceId` filter throws immediately.
-  Legitimate cross-workspace system queries (e.g. the message queue drain)
-  must opt out explicitly via `.setOptions({ skipWorkspaceGuard: true })`.
+| Variable | Purpose |
+| --- | --- |
+| `NODE_ENV`, `PORT` | Runtime environment and HTTP port. Defaults are development and 8000. |
+| `MONGO_URI` | Required MongoDB connection string. |
+| `JWT_SECRET` | Required signing secret. Production requires at least 32 characters. |
+| `JWT_EXPIRES_IN`, `BCRYPT_SALT_ROUNDS` | Session lifetime and password hash cost. |
+| `TRUST_PROXY_HOPS` | Number of trusted reverse proxy hops. Defaults to `0` for direct access. |
+| `CORS_ORIGINS` | Comma-separated frontend origins. Development defaults to `http://localhost:5173`. |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `TWILIO_SMS_FROM` | Credentials and sender addresses for queued messages. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Billing credentials and callback signing secret. |
+| `LINK_TOKEN_SECRET`, `LINK_TOKEN_TTL_HOURS` | Reserved signing setting and receipt lifetime. Current receipt tokens are random and stored in MongoDB. The default lifetime is 48 hours. |
 
-- **Messages are queued, never sent inline.** A transaction POST writes a
-  `MessageJob` (see `models/messageJob.model.js`) instead of calling Twilio
-  directly. `services/messageQueue.service.js` drains pending jobs on a
-  30-second cron tick, with retry counts and a `Notification` audit log.
+Set `TRUST_PROXY_HOPS=1` on a deployment with exactly one trusted reverse proxy in front of Express. The proxy must overwrite or append the real peer address in `X-Forwarded-For`, and clients must reach Express through that proxy. Match the value to the actual network path before enabling it.
 
-- **Scheduler locking.** `services/scheduler.service.js` uses a
-  `SchedulerLock` document with a unique `{jobName, runDate}` index so the
-  end-of-day summary cron can't double-fire if Railway ever runs more than
-  one instance.
+Per IP, login allows 30 unsuccessful requests per 15 minutes. Successful logins release their slot once the response finishes. Signup has its own budget of 10 requests per 15 minutes. Counters are stored per process.
 
-- **Templated messages, no LLM.** `services/messageBuilder.service.js` is
-  deliberately deterministic string templates — AI-generated messaging is a
-  parked v2 idea, not part of v1.
+## Stock, customer balances, and reports
 
-- **Zod validation** runs at the route boundary
-  (`middleware/validate.middleware.js` + `validators/*.schema.js`) before
-  anything touches a controller.
+Tracked sales, voids, and payments use MongoDB transactions on a replica set or sharded cluster. Standalone MongoDB uses per-process ordered writes and compensation. Use a replica set for production because a standalone process crash can interrupt compensation.
 
-## Not yet wired up (stubs to fill in)
+Phase 1 tracks stock and credit effects as they are posted. Earlier sales have no reliable stock movement or credit entry to reverse, so voiding them updates their status without guessing an inventory or balance adjustment. A void after a payment can leave a credit on the customer account. Tracked inventory with active sales cannot be removed because those sales may need stock restored.
 
-- `notifications`, `summary`, `customers` routes — follow the
-  `transactions` route/controller pair as the template.
-- PDF generation (pdfkit or Puppeteer) for invoices.
-- Razorpay subscription + webhook handlers, including event-ID idempotency
-  storage before processing.
-- EOD summary job body in `scheduler.service.js` (currently just acquires
-  the lock and logs).
+Use `GET /api/reports/sales?from=YYYY-MM-DD&to=YYYY-MM-DD&groupBy=day` with a bearer token. The date range is inclusive in Asia/Kolkata and is limited to 366 days. Grouping also supports `item` and `paymentMode`. Add `format=csv` to download grouped rows and a total row.
+
+The test suite starts its own in-memory MongoDB and HTTP server. Its first run may download a MongoDB binary. It uses a replica set by default. Set `FUELO_TEST_STANDALONE=1` to exercise compensation against standalone MongoDB. It leaves the scheduler off and uses no live provider credentials.

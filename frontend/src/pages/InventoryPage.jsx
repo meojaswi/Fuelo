@@ -31,21 +31,22 @@ export default function InventoryPage() {
   const [editValues, setEditValues] = useState({ currentStock: "", pricePerUnit: "" });
   const [editLoading, setEditLoading] = useState(false);
 
-  useEffect(() => {
-    loadInventory();
-  }, [user?.workspaceId]);
-
   async function loadInventory() {
     setLoading(true);
     try {
       const data = await fetchInventory();
       setItems(data);
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "Failed to load inventory." });
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadInventory();
+  }, [user?.workspaceId]);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -85,10 +86,16 @@ export default function InventoryPage() {
     setMessage(null);
     const item = items[editIdx];
     try {
-      const updated = await updateInventoryItem(item.itemType, {
-        currentStock: Number(editValues.currentStock),
-        pricePerUnit: Number(editValues.pricePerUnit),
-      });
+      const updates = {};
+      for (const key of ["currentStock", "pricePerUnit"]) {
+        const value = Number(editValues[key]);
+        if (value !== item[key]) updates[key] = value;
+      }
+      if (!Object.keys(updates).length) {
+        setEditIdx(null);
+        return;
+      }
+      const updated = await updateInventoryItem(item.itemType, updates);
       setItems((prev) => prev.map((it, i) => (i === editIdx ? updated : it)));
       setEditIdx(null);
       setMessage({ type: "success", text: `"${item.itemType}" updated.` });

@@ -1,7 +1,6 @@
-import Input from "./Input";
 export default function PhoneInput(p) {
   return (
-    <div>
+    <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-slate-600">Phone</span>
       <div className="control flex overflow-hidden">
         <span className="grid place-items-center border-r border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
@@ -13,6 +12,6 @@ export default function PhoneInput(p) {
           maxLength={10}
         />
       </div>
-    </div>
+    </label>
   );
 }

@@ -17,6 +17,6 @@ npm install
 npm run dev
 
 Set:
-VITE_API_BASE_URL=http://localhost:5000/api
+VITE_API_BASE_URL=http://localhost:8000/api
 
 Backend API route assumptions are documented in the original starter. Adjust only src/api if your backend paths differ.

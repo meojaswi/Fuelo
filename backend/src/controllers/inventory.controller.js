@@ -1,76 +1,124 @@
 const Inventory = require("../models/inventory.model");
+const PriceHistory = require("../models/priceHistory.model");
+const Transaction = require("../models/transaction.model");
+const { atomic, fail } = require("../services/atomic.service");
+const { recordMovement } = require("../services/stock.service");
 
 async function getAll(req, res) {
   const items = await Inventory.find({ workspaceId: req.workspaceId }).sort({ itemType: 1 });
   res.json(items);
 }
 
+function recordAdjustment(req, item, delta, context) {
+  if (!delta) return;
+  return recordMovement(
+    {
+      workspaceId: req.workspaceId,
+      itemType: item.itemType,
+      delta,
+      reason: "manual_adjust",
+      createdBy: req.user.dealerId,
+      balanceAfter: item.currentStock,
+    },
+    context
+  );
+}
+
 async function create(req, res) {
-  const { itemType, currentStock, unit, pricePerUnit } = req.body;
-
-  if (!itemType || !unit) {
-    return res.status(400).json({ error: "itemType and unit are required" });
+  const { workspaceId } = req;
+  const { itemType, currentStock = 0, unit, pricePerUnit = 0 } = req.body;
+  try {
+    const item = await atomic(workspaceId, async (context) => {
+      const entry = await new Inventory({
+        workspaceId,
+        itemType,
+        currentStock,
+        unit,
+        pricePerUnit,
+      }).save({ session: context.session });
+      context.compensate(() => Inventory.deleteOne({ workspaceId, _id: entry._id }));
+      await recordAdjustment(req, entry, currentStock, context);
+      return entry;
+    });
+    res.status(201).json(item);
+  } catch (err) {
+    if (err.code !== 11000) throw err;
+    res.status(409).json({ error: `Inventory entry for "${itemType}" already exists` });
   }
-
-  const existing = await Inventory.findOne({ workspaceId: req.workspaceId, itemType });
-  if (existing) {
-    return res.status(409).json({ error: `Inventory entry for "${itemType}" already exists` });
-  }
-
-  const item = await Inventory.create({
-    workspaceId: req.workspaceId,
-    itemType,
-    currentStock: currentStock || 0,
-    unit,
-    pricePerUnit: pricePerUnit || 0,
-    lastPriceUpdate: new Date(),
-    priceSource: "manual",
-  });
-
-  res.status(201).json(item);
 }
 
 async function update(req, res) {
-  const { itemType } = req.params;
+  const { workspaceId } = req;
+  const scope = { workspaceId, itemType: req.params.itemType };
   const { currentStock, pricePerUnit } = req.body;
+  const item = await atomic(workspaceId, async (context) => {
+    const { session, compensate } = context;
+    const previous = await Inventory.findOne(scope).session(session);
+    if (!previous) fail(404, "Inventory item not found");
 
-  const updates = {};
-  if (currentStock !== undefined) updates.currentStock = currentStock;
-  if (pricePerUnit !== undefined) {
-    updates.pricePerUnit = pricePerUnit;
-    updates.lastPriceUpdate = new Date();
-    updates.priceSource = "manual";
-  }
+    const updates = {};
+    if (currentStock !== undefined) updates.currentStock = currentStock;
+    if (pricePerUnit !== undefined && pricePerUnit !== previous.pricePerUnit) {
+      updates.pricePerUnit = pricePerUnit;
+      updates.lastPriceUpdate = new Date();
+      updates.priceSource = "manual";
+    }
+    if (!Object.keys(updates).length) return previous;
 
-  if (Object.keys(updates).length === 0) {
-    return res.status(400).json({ error: "Nothing to update" });
-  }
-
-  const item = await Inventory.findOneAndUpdate(
-    { workspaceId: req.workspaceId, itemType },
-    { $set: updates },
-    { new: true }
-  );
-
-  if (!item) {
-    return res.status(404).json({ error: `Inventory item "${itemType}" not found` });
-  }
-
+    const filter = {
+      ...scope,
+      _id: previous._id,
+      currentStock: previous.currentStock,
+      pricePerUnit: previous.pricePerUnit,
+    };
+    const entry = await Inventory.findOneAndUpdate(
+      filter,
+      { $set: updates },
+      { new: true, session }
+    );
+    if (!entry) fail(409, "Inventory changed. Refresh and try again.");
+    const original = Object.fromEntries(Object.keys(updates).map((key) => [key, previous[key]]));
+    compensate(() =>
+      Inventory.updateOne({ workspaceId, _id: previous._id, ...updates }, { $set: original })
+    );
+    await recordAdjustment(req, entry, entry.currentStock - previous.currentStock, context);
+    if (updates.pricePerUnit !== undefined) {
+      await new PriceHistory({
+        workspaceId,
+        itemType: entry.itemType,
+        oldPrice: previous.pricePerUnit,
+        newPrice: entry.pricePerUnit,
+        changedBy: req.user.dealerId,
+        changedAt: entry.lastPriceUpdate,
+      }).save({ session });
+    }
+    return entry;
+  });
   res.json(item);
 }
 
 async function remove(req, res) {
-  const { itemType } = req.params;
-
-  const item = await Inventory.findOneAndDelete({
-    workspaceId: req.workspaceId,
-    itemType,
+  const { workspaceId } = req;
+  const scope = { workspaceId, itemType: req.params.itemType };
+  await atomic(workspaceId, async (context) => {
+    const { session, compensate } = context;
+    const item = await Inventory.findOneAndDelete(scope, { session });
+    if (!item) fail(404, "Inventory item not found");
+    compensate(() => Inventory.create(item.toObject()));
+    if (
+      await Transaction.exists({ workspaceId, inventoryId: item._id, status: "active" }).session(
+        session
+      )
+    ) {
+      fail(409, "Inventory with active sales cannot be removed because voiding restores stock");
+    }
+    await recordAdjustment(
+      req,
+      { itemType: item.itemType, currentStock: 0 },
+      -item.currentStock,
+      context
+    );
   });
-
-  if (!item) {
-    return res.status(404).json({ error: `Inventory item "${itemType}" not found` });
-  }
-
   res.json({ ok: true });
 }
 

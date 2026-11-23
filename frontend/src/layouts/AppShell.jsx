@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { NavLink, Link, Routes, Route } from "react-router-dom";
 import {
-  BarChart3,
   Check,
   ChevronDown,
   LayoutDashboard,
@@ -10,8 +9,9 @@ import {
   Plus,
   Settings,
   Users,
-  Wallet,
   MessageSquare,
+  Wallet,
+  Package,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import TopBar from "./TopBar";
@@ -25,6 +25,9 @@ import MessagesPage from "../pages/MessagesPage";
 import MembersPage from "../pages/MembersPage";
 import WorkspacesPage from "../pages/WorkspacesPage";
 import SettingsPage from "../pages/SettingsPage";
+
+const InventoryPage = lazy(() => import("../pages/InventoryPage"));
+const CreditPage = lazy(() => import("../pages/CreditPage"));
 
 export default function AppShell() {
   const { user, workspaces, logout } = useAuth();
@@ -132,6 +135,8 @@ export default function AppShell() {
             <Item to="/" icon={LayoutDashboard} label="Overview" />
             <Item to="/transactions/new" icon={Plus} label="New transaction" />
             <Item to="/transactions" icon={List} label="Transactions" />
+            <Item to="/inventory" icon={Package} label="Inventory" />
+            <Item to="/credit" icon={Wallet} label="Credit / Udhaar" />
           </nav>
           <p className="mono-label mt-7 px-2">Manage</p>
           <nav className="mt-2 space-y-1">
@@ -150,16 +155,21 @@ export default function AppShell() {
       <main className="md:pl-64">
         <TopBar />
         <div className="mx-auto max-w-[1400px] p-4 pb-24 md:p-8">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/transactions/new" element={<NewTransactionPage />} />
-            <Route path="/transactions" element={<TransactionListPage />} />
-            <Route path="/transactions/:id" element={<TransactionDetailPage />} />
-            <Route path="/members" element={<MembersPage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            <Route path="/workspaces" element={<WorkspacesPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
+          <Suspense fallback={<p className="text-sm text-slate-500">Loading page…</p>}>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/transactions/new" element={<NewTransactionPage />} />
+              <Route path="/transactions" element={<TransactionListPage />} />
+              <Route path="/transactions/:id" element={<TransactionDetailPage />} />
+              <Route path="/members" element={<MembersPage />} />
+              <Route path="/inventory" element={<InventoryPage key={user?.workspaceId} />} />
+              <Route path="/credit" element={<CreditPage />} />
+              <Route path="/credit/:id" element={<CreditPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/workspaces" element={<WorkspacesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </Suspense>
         </div>
       </main>
       <BottomNav />

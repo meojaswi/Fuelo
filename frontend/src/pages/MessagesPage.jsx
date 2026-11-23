@@ -3,7 +3,6 @@ import { MessageSquare, RefreshCcw, CheckCircle2, XCircle, Clock } from "lucide-
 import { listNotifications, retryNotification } from "../api/notifications.api";
 import Pagination from "../components/shared/Pagination";
 import EmptyState from "../components/shared/EmptyState";
-import Button from "../components/shared/Button";
 import { useAuth } from "../context/AuthContext";
 
 export default function MessagesPage() {
@@ -26,6 +25,7 @@ export default function MessagesPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMessages(page);
   }, [page, user?.workspaceId]);
 

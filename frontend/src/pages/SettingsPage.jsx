@@ -10,6 +10,9 @@ export default function SettingsPage() {
 
   // Profile State
   const [businessName, setBusinessName] = useState(user?.businessName || "");
+  const [allowNegativeStock, setAllowNegativeStock] = useState(
+    user?.config?.allowNegativeStock === true
+  );
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState(null);
 
@@ -17,9 +20,12 @@ export default function SettingsPage() {
   const [itemTypes, setItemTypes] = useState(user?.config?.itemTypes || []);
 
   useEffect(() => {
+    // Reset the editable draft when the active workspace profile changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBusinessName(user?.businessName || "");
     setItemTypes(user?.config?.itemTypes || []);
-  }, [user?.businessName, user?.config?.itemTypes]);
+    setAllowNegativeStock(user?.config?.allowNegativeStock === true);
+  }, [user?.businessName, user?.config?.itemTypes, user?.config?.allowNegativeStock]);
   const [newItemName, setNewItemName] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsMessage, setItemsMessage] = useState(null);
@@ -35,7 +41,7 @@ export default function SettingsPage() {
     setProfileLoading(true);
     setProfileMessage(null);
     try {
-      const data = await updateDealerRequest({ businessName });
+      const data = await updateDealerRequest({ businessName, allowNegativeStock });
       updateSession({ dealer: data });
       setProfileMessage({ type: "success", text: "Profile updated successfully." });
     } catch (err) {
@@ -141,6 +147,14 @@ export default function SettingsPage() {
               className="w-full rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 uppercase tracking-wide cursor-not-allowed"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allowNegativeStock}
+              onChange={(e) => setAllowNegativeStock(e.target.checked)}
+            />
+            Allow sales to take tracked stock below zero
+          </label>
           {profileMessage && (
             <div
               className={`flex items-center gap-2 text-sm font-medium ${profileMessage.type === "error" ? "text-red-600" : "text-emerald-600"}`}

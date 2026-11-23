@@ -14,11 +14,17 @@ const transactionSchema = new mongoose.Schema(
     quantity: { type: Number, required: true },
     unit: { type: String, required: true }, // litres, cubic ft, bags, etc.
     amount: { type: Number, required: true },
+    expectedAmount: Number,
+    priceMismatch: Boolean,
 
     paymentMode: { type: String, enum: ["cash", "upi", "credit"], required: true },
     upiReference: { type: String }, // manual RRN entry, v1 approach
 
     notes: { type: String },
+    inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },
+    voidedAt: Date,
+    voidedReason: String,
+    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Dealer" },
     status: { type: String, enum: ["active", "voided"], default: "active" },
   },
   { timestamps: true }

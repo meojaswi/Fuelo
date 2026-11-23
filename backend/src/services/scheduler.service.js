@@ -5,6 +5,8 @@ const DailySummary = require("../models/dailySummary.model");
 const messageQueue = require("./messageQueue.service");
 const messageBuilder = require("./messageBuilder.service");
 const dashboardService = require("./dashboard.service");
+const { IST_TIME_ZONE, istDateString } = require("../utils/datetime");
+const { roundMoney } = require("../utils/money");
 const logger = require("../utils/logger");
 
 /**
@@ -14,8 +16,7 @@ const logger = require("../utils/logger");
  * already grabbed it, so we skip. Prevents double-sending EOD summaries if
  * Railway ever runs more than one instance.
  */
-async function acquireDailyLock(jobName) {
-  const runDate = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+async function acquireDailyLock(jobName, runDate = istDateString()) {
   try {
     await SchedulerLock.create({ jobName, runDate });
     return true;
@@ -35,16 +36,18 @@ function startScheduler() {
     }
   });
 
-  // End-of-day summary, 11:00 PM IST (17:30 UTC).
-  cron.schedule("30 17 * * *", async () => {
-    const gotLock = await acquireDailyLock("eod-summary");
-    if (!gotLock) {
-      logger.info({ msg: "EOD summary skipped — lock held by another instance" });
-      return;
-    }
-    logger.info({ msg: "Running EOD summary job" });
-    await runEndOfDaySummary();
-  });
+  cron.schedule(
+    "55 23 * * *",
+    async () => {
+      try {
+        const date = istDateString();
+        if (await acquireDailyLock("eod-summary", date)) await runEndOfDaySummary(date);
+      } catch (err) {
+        logger.error({ msg: "EOD summary tick failed", err: err.message });
+      }
+    },
+    { timezone: IST_TIME_ZONE }
+  );
 
   logger.info({ msg: "Scheduler started" });
 }
@@ -55,16 +58,15 @@ function startScheduler() {
  * on one workspace don't block the others — each dealer is isolated in
  * its own try/catch so one bad record can't take down the whole nightly run.
  */
-async function runEndOfDaySummary() {
-  const date = new Date().toISOString().slice(0, 10);
+async function runEndOfDaySummary(date = istDateString()) {
   const dealers = await Dealer.find({ isActive: true }).setOptions({ skipWorkspaceGuard: true });
 
   for (const dealer of dealers) {
     try {
-      const items = await dashboardService.getDailySummary(dealer.workspaceId);
+      const items = await dashboardService.getDailySummary(dealer.workspaceId, date);
       if (!items.length) continue; // nothing happened today, skip silently
 
-      const grandTotalAmount = items.reduce((sum, i) => sum + i.totalAmount, 0);
+      const grandTotalAmount = roundMoney(items.reduce((sum, i) => sum + i.totalAmount, 0));
 
       await DailySummary.findOneAndUpdate(
         { workspaceId: dealer.workspaceId, date },
@@ -88,7 +90,7 @@ async function runEndOfDaySummary() {
         body: messageBuilder.buildEndOfDaySummary({
           workspaceName: dealer.businessName,
           date,
-          lines: items.map((i) => ({ itemType: i._id, quantity: i.totalQuantity, unit: "" })),
+          lines: items.map((i) => ({ itemType: i._id, quantity: i.totalQuantity, unit: i.unit })),
           totalAmount: grandTotalAmount,
         }),
       });
@@ -102,4 +104,4 @@ async function runEndOfDaySummary() {
   }
 }
 
-module.exports = { startScheduler, acquireDailyLock };
+module.exports = { startScheduler, acquireDailyLock, runEndOfDaySummary };

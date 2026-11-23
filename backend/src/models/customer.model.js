@@ -8,10 +8,12 @@ const customerSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     isCreditCustomer: { type: Boolean, default: false },
     creditBalance: { type: Number, default: 0 },
+    creditLimit: { type: Number, default: null, min: 0 },
   },
   { timestamps: true }
 );
 
+customerSchema.index({ workspaceId: 1, creditBalance: -1, _id: 1 });
 customerSchema.index({ workspaceId: 1, phone: 1 }, { unique: true });
 customerSchema.index({ workspaceId: 1, name: "text" }); // autocomplete
 

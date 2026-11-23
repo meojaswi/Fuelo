@@ -4,6 +4,8 @@ const map = {
   "/": "Overview",
   "/transactions": "Transactions",
   "/transactions/new": "New transaction",
+  "/inventory": "Inventory",
+  "/credit": "Credit / Udhaar",
   "/members": "Members",
   "/messages": "Messages",
   "/workspaces": "Workspaces",
@@ -13,6 +15,7 @@ export default function TopBar() {
   const l = useLocation(),
     n = useNavigate(),
     back = l.pathname !== "/";
+  const title = l.pathname.startsWith("/credit/") ? "Customer ledger" : map[l.pathname] || "Page";
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-8">
       <div className="flex items-center gap-3">
@@ -23,7 +26,7 @@ export default function TopBar() {
         )}
         <div>
           <p className="mono-label hidden sm:block">Workspace / Fuelo</p>
-          <h1 className="font-bold">{map[l.pathname] || "Page"}</h1>
+          <h1 className="font-bold">{title}</h1>
         </div>
       </div>
       <button className="relative rounded-[8px] p-2.5 hover:bg-slate-100">

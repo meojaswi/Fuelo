@@ -28,7 +28,9 @@ export default function TransactionTable({ transactions = [] }) {
                 </Link>
               </td>
               <td className="px-5 py-4">{t.itemType}</td>
-              <td className="px-5 py-4 text-slate-500">{t.paymentMode}</td>
+              <td className="px-5 py-4 text-slate-500">
+                {t.status === "voided" ? "Voided" : t.paymentMode}
+              </td>
               <td className="px-5 py-4 text-right font-bold">{formatCurrency(t.amount)}</td>
             </tr>
           ))}

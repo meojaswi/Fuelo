@@ -15,14 +15,23 @@ async function createShareLink({ workspaceId, transactionId }) {
 }
 
 async function resolveShareLink(token) {
-  const link = await Link.findOne({ token }).setOptions({ skipWorkspaceGuard: true });
-  if (!link) return { valid: false, reason: "not_found" };
-  if (link.usedAt) return { valid: false, reason: "already_used" };
-  if (link.expiresAt < new Date()) return { valid: false, reason: "expired" };
+  const now = new Date();
+  const link = await Link.findOneAndUpdate(
+    { token, expiresAt: { $gt: now } },
+    [
+      {
+        $set: {
+          firstViewedAt: { $ifNull: ["$firstViewedAt", { $ifNull: ["$usedAt", now] }] },
+          viewCount: { $add: [{ $ifNull: ["$viewCount", 0] }, 1] },
+        },
+      },
+    ],
+    { new: true, skipWorkspaceGuard: true }
+  );
+  if (link) return { valid: true, link };
 
-  link.usedAt = new Date();
-  await link.save();
-  return { valid: true, link };
+  const exists = await Link.exists({ token }).setOptions({ skipWorkspaceGuard: true });
+  return { valid: false, reason: exists ? "expired" : "not_found" };
 }
 
 module.exports = { createShareLink, resolveShareLink };

@@ -1,10 +1,12 @@
+const Dealer = require("../models/dealer.model");
 const Transaction = require("../models/transaction.model");
 const linkTokenService = require("../services/linkToken.service");
 
 // Authenticated: dealer generates a share link for a transaction.
 async function create(req, res) {
-  const { transactionId } = req.body;
+  const transactionId = req.params.id || req.body?.transactionId;
 
+  if (!transactionId) return res.status(400).json({ error: "Transaction ID is required" });
   const tx = await Transaction.findOne({ _id: transactionId, workspaceId: req.workspaceId });
   if (!tx) return res.status(404).json({ error: "Transaction not found" });
 
@@ -16,16 +18,28 @@ async function create(req, res) {
   res.status(201).json({ token, expiresAt, url: `/share/${token}` });
 }
 
-// Public: anyone with the link resolves it, one-time use.
+// Public: anyone with the link can resolve it until it expires.
 async function resolve(req, res) {
-  const result = await linkTokenService.resolveShareLink(req.params.token);
-  if (!result.valid) return res.status(410).json({ error: result.reason });
+  res.set("Cache-Control", "no-store");
+  res.set("Referrer-Policy", "no-referrer");
 
-  const tx = await Transaction.findOne({
-    _id: result.link.transactionId,
-    workspaceId: result.link.workspaceId,
-  });
-  res.json({ transaction: tx });
+  const result = await linkTokenService.resolveShareLink(req.params.token);
+  if (!result.valid) {
+    if (result.reason === "expired") {
+      return res.status(410).json({ code: "EXPIRED", error: "Receipt link has expired" });
+    }
+    return res.status(404).json({ code: "NOT_FOUND", error: "Receipt link not found" });
+  }
+
+  const { workspaceId, transactionId } = result.link;
+  const [transaction, dealer] = await Promise.all([
+    Transaction.findOne({ _id: transactionId, workspaceId }),
+    Dealer.findOne({ workspaceId }).select("businessName"),
+  ]);
+  if (!transaction || !dealer) {
+    return res.status(404).json({ code: "NOT_FOUND", error: "Receipt not found" });
+  }
+  res.json({ transaction, businessName: dealer.businessName });
 }
 
 module.exports = { create, resolve };

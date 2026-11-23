@@ -3,10 +3,6 @@ import AppShell from "./layouts/AppShell";
 import LoginPage from "./pages/LoginPage";
 import PricingPage from "./pages/PricingPage";
 import SignupPage from "./pages/SignupPage";
-import DashboardPage from "./pages/DashboardPage";
-import NewTransactionPage from "./pages/NewTransactionPage";
-import TransactionListPage from "./pages/TransactionListPage";
-import TransactionDetailPage from "./pages/TransactionDetailPage";
 import SharedReceiptPage from "./pages/SharedReceiptPage";
 import { useAuth } from "./context/AuthContext";
 function Protected({ children }) {
@@ -25,6 +21,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/share/:token" element={<SharedReceiptPage />} />
       <Route path="/receipt/:token" element={<SharedReceiptPage />} />
       <Route
         path="/*"

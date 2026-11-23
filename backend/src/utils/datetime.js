@@ -1,23 +1,31 @@
-const IST_OFFSET_MINUTES = 5.5 * 60;
+const IST_TIME_ZONE = "Asia/Kolkata";
+const DAY_MS = 86_400_000;
+const IST_OFFSET_MS = 330 * 60_000;
+const formatter = new Intl.DateTimeFormat("en", {
+  timeZone: IST_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
-/** Returns the current time as an IST-shifted Date (for display/calc only — store UTC in Mongo). */
-function nowIST() {
-  const now = new Date();
-  return new Date(now.getTime() + IST_OFFSET_MINUTES * 60 * 1000);
-}
-
-/** Start and end of the IST business day containing `date` (defaults to now), returned in UTC. */
-function istDayBoundsUTC(date = new Date()) {
-  const ist = new Date(date.getTime() + IST_OFFSET_MINUTES * 60 * 1000);
-  const startIST = new Date(
-    Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), 0, 0, 0)
+function istDateString(date = new Date()) {
+  const parts = Object.fromEntries(
+    formatter.formatToParts(date).map(({ type, value }) => [type, value])
   );
-  const endIST = new Date(startIST.getTime() + 24 * 60 * 60 * 1000);
-
-  return {
-    startUTC: new Date(startIST.getTime() - IST_OFFSET_MINUTES * 60 * 1000),
-    endUTC: new Date(endIST.getTime() - IST_OFFSET_MINUTES * 60 * 1000),
-  };
+  return `${parts.year.padStart(4, "0")}-${parts.month}-${parts.day}`;
 }
 
-module.exports = { nowIST, istDayBoundsUTC };
+function istDayBoundsUTC(date = new Date()) {
+  const key = date instanceof Date ? istDateString(date) : date;
+  if (typeof key !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+    throw new RangeError("Expected a calendar date in YYYY-MM-DD format");
+  }
+  const midnight = new Date(`${key}T00:00:00.000Z`);
+  if (!Number.isFinite(+midnight) || midnight.toISOString().slice(0, 10) !== key) {
+    throw new RangeError("Expected a valid calendar date");
+  }
+  const start = +midnight - IST_OFFSET_MS;
+  return { startUTC: new Date(start), endUTC: new Date(start + DAY_MS) };
+}
+
+module.exports = { IST_TIME_ZONE, istDateString, istDayBoundsUTC };
