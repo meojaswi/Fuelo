@@ -3,20 +3,20 @@ import { Link } from "react-router-dom";
 import { cancelBilling, getBilling } from "../api/billing.api";
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/shared/Button";
-import { formatDate } from "../utils/formatters";
+import { formatDate, formatQuantity } from "../utils/formatters";
 
 export default function BillingPage() {
   const { user } = useAuth();
   return <Billing key={user?.workspaceId} />;
 }
 
-function Usage({ label, used, limit }) {
+function Usage({ label, used, limit, unit }) {
   return (
     <div className="space-y-2">
       <p className="flex justify-between text-sm">
         <span>{label}</span>
         <strong>
-          {used} / {limit ?? "Unlimited"}
+          {formatQuantity(used)} / {limit == null ? "Unlimited" : formatQuantity(limit)} {unit}
         </strong>
       </p>
       {limit != null && (
@@ -92,11 +92,13 @@ function Billing() {
             </div>
             <Usage
               label="Transactions this month"
+              unit="transactions"
               used={info.usage.transactions}
               limit={info.limits.monthlyTransactionCap}
             />
             <Usage
               label="Members and pending invites"
+              unit="members"
               used={info.usage.members}
               limit={info.limits.maxUsers}
             />
@@ -126,7 +128,7 @@ function Billing() {
           </div>
           <div className="flex flex-wrap gap-4">
             <Link
-              className="rounded-lg bg-fuelo-ink px-4 py-2.5 text-sm font-semibold text-white"
+              className="inline-flex min-h-11 items-center rounded-lg bg-fuelo-ink px-4 py-2.5 text-sm font-semibold text-white"
               to="/pricing"
             >
               View plans

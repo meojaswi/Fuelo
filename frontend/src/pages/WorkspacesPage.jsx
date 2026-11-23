@@ -84,8 +84,11 @@ export default function WorkspacesPage() {
         {workspaces.map((ws) => {
           const isActive = ws.workspaceId === user.workspaceId;
           return (
-            <div key={ws.workspaceId} className="flex items-center justify-between p-5">
-              <div className="flex items-center gap-4">
+            <div
+              key={ws.workspaceId}
+              className="flex flex-wrap items-center justify-between gap-3 p-5"
+            >
+              <div className="flex min-w-0 items-center gap-4">
                 <div
                   className={`grid h-10 w-10 place-items-center rounded-[8px] ${isActive ? "bg-fuelo-ink text-white" : "bg-slate-100 text-slate-500"}`}
                 >
@@ -112,7 +115,8 @@ export default function WorkspacesPage() {
                       <button
                         onClick={() => handleDelete(ws.workspaceId)}
                         disabled={loading}
-                        className="grid h-9 w-9 place-items-center rounded-[8px] text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
+                        aria-label={`Delete workspace ${ws.businessName}`}
+                        className="grid h-11 w-11 place-items-center rounded-[8px] text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -143,26 +147,28 @@ export default function WorkspacesPage() {
             <h3 className="font-bold mb-4">Create New Workspace</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-1">Business Name</label>
+                <label htmlFor="ws-name" className="mb-1 block text-sm font-semibold">Business Name</label>
                 <input
                   type="text"
                   required
+                  id="ws-name"
                   value={newWorkspace.businessName}
                   onChange={(e) =>
                     setNewWorkspace({ ...newWorkspace, businessName: e.target.value })
                   }
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                   placeholder="e.g. Acme Corp"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Vertical Type</label>
+                <label htmlFor="ws-vertical" className="mb-1 block text-sm font-semibold">Vertical Type</label>
                 <select
+                  id="ws-vertical"
                   value={newWorkspace.verticalType}
                   onChange={(e) =>
                     setNewWorkspace({ ...newWorkspace, verticalType: e.target.value })
                   }
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none bg-white"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none bg-white"
                 >
                   <option value="fuel">Fuel</option>
                   <option value="timber">Timber</option>
@@ -175,7 +181,7 @@ export default function WorkspacesPage() {
                 <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" loading={loading}>
                   Create Workspace
                 </Button>
               </div>

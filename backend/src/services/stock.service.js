@@ -11,10 +11,13 @@ async function recordMovement(data, { session, compensate }) {
 }
 
 // Decimal arithmetic preserves fractional stock on inventory without tanks.
-function stockDelta(delta) {
+function stockDelta(delta, piecesDelta) {
   return [
     {
       $set: {
+        ...(piecesDelta !== undefined && {
+          currentPieces: { $add: [{ $ifNull: ["$currentPieces", 0] }, piecesDelta] },
+        }),
         currentStock: {
           $toDouble: { $add: [{ $toDecimal: "$currentStock" }, { $toDecimal: delta.toString() }] },
         },
@@ -82,7 +85,17 @@ async function initializeTank(tank, openingStock, inventory, createdBy, context)
 }
 
 async function changeStock(options, context) {
-  const { filter, reason, transactionId, deliveryId, shiftId, createdBy, allowNegative } = options;
+  const {
+    filter,
+    reason,
+    transactionId,
+    deliveryId,
+    shiftId,
+    purchaseId,
+    piecesDelta,
+    createdBy,
+    allowNegative,
+  } = options;
   const { session, compensate } = context;
   const tanks = await Tank.find({
     workspaceId: filter.workspaceId,
@@ -105,7 +118,8 @@ async function changeStock(options, context) {
 
   const condition = { ...filter };
   if (delta < 0 && !allowNegative) condition.currentStock = { $gte: -delta };
-  const item = await Inventory.findOneAndUpdate(condition, stockDelta(delta), {
+  if (piecesDelta < 0 && !allowNegative) condition.currentPieces = { $gte: -piecesDelta };
+  const item = await Inventory.findOneAndUpdate(condition, stockDelta(delta, piecesDelta), {
     new: true,
     session,
   });
@@ -118,7 +132,12 @@ async function changeStock(options, context) {
   }
 
   const scope = { workspaceId: item.workspaceId, _id: item._id };
-  compensate(() => Inventory.updateOne(scope, stockDelta(-delta)));
+  compensate(() =>
+    Inventory.updateOne(
+      scope,
+      stockDelta(-delta, piecesDelta === undefined ? undefined : -piecesDelta)
+    )
+  );
   const tankChanges = [];
   for (const change of requested) {
     const tank = tanks.find((candidate) => String(candidate._id) === String(change.tankId));
@@ -126,7 +145,7 @@ async function changeStock(options, context) {
     tankChanges.push(await updateTank(tank, litres(change.delta), options, context));
   }
   item.$locals.tankChanges = tankChanges;
-  if (delta || tankChanges.length) {
+  if (delta || piecesDelta || tankChanges.length) {
     const movement = await recordMovement(
       {
         workspaceId: item.workspaceId,
@@ -135,6 +154,9 @@ async function changeStock(options, context) {
         reason,
         transactionId,
         deliveryId,
+        purchaseId,
+        piecesDelta,
+        piecesAfter: piecesDelta === undefined ? undefined : item.currentPieces,
         shiftId,
         createdBy,
         balanceAfter: item.currentStock,

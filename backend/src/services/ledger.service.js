@@ -26,7 +26,11 @@ async function findCreditCustomer(
   return customer;
 }
 
-async function postEntry(data, { session, compensate }, { override = false } = {}) {
+async function postEntry(
+  data,
+  { session, compensate },
+  { override = false, allowAdvance = false } = {}
+) {
   const { workspaceId, customerId, type, direction, amount } = data;
   const scope = { workspaceId, _id: customerId };
   const customer = await Customer.findOne(scope).session(session).lean();
@@ -34,8 +38,13 @@ async function postEntry(data, { session, compensate }, { override = false } = {
 
   const rawBalance = customer.creditBalance ?? 0;
   const balance = roundMoney(rawBalance);
+  if (data.affectsBalance === false) {
+    const entry = await new LedgerEntry({ ...data, balanceAfter: balance }).save({ session });
+    compensate(() => LedgerEntry.deleteOne({ workspaceId, _id: entry._id }));
+    return { entry, customer };
+  }
   const balanceAfter = roundMoney(balance + (direction === "debit" ? amount : -amount));
-  if (type === "payment" && amount > balance) {
+  if (type === "payment" && !allowAdvance && amount > balance) {
     fail(409, "Payment exceeds the outstanding balance", "OVERPAYMENT");
   }
   if (
@@ -120,7 +129,9 @@ async function reverseCreditSale(transaction, createdBy, context) {
       customerId: original.customerId,
       type: "void_reversal",
       direction: "credit",
-      amount: original.amount,
+      amount: roundMoney(
+        original.amount + (transaction.lineItems?.length ? transaction.paidAmount || 0 : 0)
+      ),
       transactionId,
       note: transaction.voidedReason,
       createdBy,
@@ -129,4 +140,4 @@ async function reverseCreditSale(transaction, createdBy, context) {
   );
 }
 
-module.exports = { postEntry, recordCreditSale, reverseCreditSale };
+module.exports = { postEntry, findCreditCustomer, recordCreditSale, reverseCreditSale };

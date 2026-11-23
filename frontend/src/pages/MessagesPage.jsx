@@ -3,6 +3,8 @@ import { MessageSquare, RefreshCcw, CheckCircle2, XCircle, Clock } from "lucide-
 import { listNotifications, retryNotification } from "../api/notifications.api";
 import Pagination from "../components/shared/Pagination";
 import EmptyState from "../components/shared/EmptyState";
+import Button from "../components/shared/Button";
+import { formatDate } from "../utils/formatters";
 import { useAuth } from "../context/AuthContext";
 
 export default function MessagesPage() {
@@ -11,14 +13,17 @@ export default function MessagesPage() {
   const [data, setData] = useState({ notifications: [], total: 0, limit: 20 });
   const [loading, setLoading] = useState(true);
   const [retryingId, setRetryingId] = useState(null);
+  const [error, setError] = useState("");
 
   const fetchMessages = async (p = 1) => {
     setLoading(true);
+    setError("");
     try {
       const res = await listNotifications({ page: p });
       setData(res);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
+      setError("Could not load messages. Try again.");
     } finally {
       setLoading(false);
     }
@@ -50,6 +55,12 @@ export default function MessagesPage() {
         <h2 className="mt-2 text-2xl font-bold">Messages.</h2>
         <p className="mt-1 text-sm text-slate-500">History and queue for WhatsApp & SMS.</p>
       </div>
+
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
 
       <div className="panel overflow-hidden">
         {loading && data.notifications.length === 0 ? (
@@ -109,7 +120,7 @@ export default function MessagesPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-500">
-                        {new Date(msg.createdAt).toLocaleString(undefined, {
+                        {formatDate(msg.createdAt, {
                           month: "short",
                           day: "numeric",
                           hour: "numeric",
@@ -118,17 +129,16 @@ export default function MessagesPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         {msg.status === "failed" && (
-                          <button
+                          <Button
+                            type="button"
+                            variant="secondary"
                             onClick={() => handleRetry(msg._id)}
-                            disabled={retryingId === msg._id}
-                            className="inline-flex items-center gap-1.5 rounded-[6px] bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+                            loading={retryingId === msg._id}
+                            className="text-xs"
                           >
-                            <RefreshCcw
-                              size={12}
-                              className={retryingId === msg._id ? "animate-spin" : ""}
-                            />
+                            {retryingId !== msg._id && <RefreshCcw size={12} />}
                             Retry
-                          </button>
+                          </Button>
                         )}
                       </td>
                     </tr>

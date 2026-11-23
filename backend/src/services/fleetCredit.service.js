@@ -1,10 +1,10 @@
 const { istDayBoundsUTC } = require("../utils/datetime");
 
-function oldestUnpaidSale(entries) {
+function unpaidCharges(entries, reference = "transactionId") {
   // A void removes its own charge. Money previously applied to it remains
   // available to cover the next oldest charge, including later sales.
   const voided = new Set(
-    entries.filter((row) => row.type === "void_reversal").map((row) => String(row.transactionId))
+    entries.filter((row) => row.type === "void_reversal").map((row) => String(row[reference]))
   );
   const dues = [];
   let pointer = 0;
@@ -12,12 +12,13 @@ function oldestUnpaidSale(entries) {
   for (const row of entries) {
     if (
       row.type === "void_reversal" ||
-      (row.type === "credit_sale" && voided.has(String(row.transactionId)))
+      (row.affectsBalance === false && !voided.has(String(row[reference]))) ||
+      (row.direction === "debit" && voided.has(String(row[reference])))
     )
       continue;
     const cents = Math.round(row.amount * 100);
     if (row.direction === "credit") available += cents;
-    else dues.push({ cents, date: row.createdAt, sale: row.type === "credit_sale" });
+    else dues.push({ cents, date: row.createdAt, type: row.type });
     while (available && pointer < dues.length) {
       const next = dues[pointer];
       const applied = Math.min(available, next.cents);
@@ -26,7 +27,11 @@ function oldestUnpaidSale(entries) {
       if (!next.cents) pointer++;
     }
   }
-  return dues.slice(pointer).find((row) => row.sale)?.date ?? null;
+  return dues.slice(pointer);
+}
+
+function oldestUnpaidSale(entries) {
+  return unpaidCharges(entries).find((row) => row.type === "credit_sale")?.date ?? null;
 }
 
 function creditAge(entries, creditDays, now = new Date()) {
@@ -49,4 +54,4 @@ function creditAge(entries, creditDays, now = new Date()) {
   };
 }
 
-module.exports = { oldestUnpaidSale, creditAge };
+module.exports = { unpaidCharges, oldestUnpaidSale, creditAge };

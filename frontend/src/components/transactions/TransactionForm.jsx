@@ -106,7 +106,7 @@ export default function TransactionForm({ onSaved }) {
       setSaving(false);
     }
   }
-  const msg = `Hi ${f.customerName || "Customer"}, your ${f.itemType} transaction of ₹${amount || 0} has been recorded. Payment: ${f.paymentMode}. Thank you.`;
+  const msg = `Hi ${f.customerName || "Customer"}, your ${f.itemType} transaction of ${formatCurrency(Number(amount || 0))} has been recorded. Payment: ${f.paymentMode}. Thank you.`;
   return (
     <form onSubmit={submit} className="space-y-6">
       <CustomerNameInput
@@ -165,7 +165,7 @@ export default function TransactionForm({ onSaved }) {
           {f.amount !== null && expectedAmount > 0 && (
             <button
               type="button"
-              className="mt-1 text-xs font-semibold text-fuelo-coral"
+              className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-fuelo-coral"
               onClick={() => u("amount", null)}
             >
               Use list price
@@ -182,7 +182,7 @@ export default function TransactionForm({ onSaved }) {
       {f.paymentMode === "Credit" &&
         saveError?.creditLimit &&
         user?.permissions?.includes("credit:payment") && (
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={override}
@@ -197,7 +197,7 @@ export default function TransactionForm({ onSaved }) {
             <label className="block space-y-1">
               <span className="text-xs font-semibold text-slate-600">Fleet vehicle</span>
               <select
-                className="control w-full px-3 py-2"
+                className="control min-h-11 w-full px-3 py-2"
                 value={
                   vehicles.some((vehicle) => vehicle.number === f.vehicleNumber)
                     ? f.vehicleNumber
@@ -233,7 +233,7 @@ export default function TransactionForm({ onSaved }) {
         <button
           type="button"
           onClick={() => setPreview(true)}
-          className="text-sm font-semibold text-slate-500 hover:text-slate-900"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-slate-500 hover:text-slate-900"
         >
           Preview message
         </button>

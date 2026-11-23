@@ -18,6 +18,7 @@ const schema = new mongoose.Schema(
     upiReference: String,
     note: String,
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    affectsBalance: { type: Boolean, default: true },
     balanceAfter: { type: Number, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

@@ -1,7 +1,8 @@
 const { lockWorkspace } = require("../services/workspaceWrite.service");
 const { assertCan } = require("../services/entitlements.service");
 const { creditAge } = require("../services/fleetCredit.service");
-const { writePump } = require("../services/pumpWrite.service");
+const { checkPump } = require("../middleware/pump.middleware");
+const { checkTimber } = require("../middleware/timber.middleware");
 const { buildReminder } = require("../services/messageBuilder.service");
 const audit = require("../services/audit.service");
 const LedgerEntry = require("../models/ledgerEntry.model");
@@ -10,13 +11,25 @@ const { postEntry } = require("../services/ledger.service");
 const { enqueue } = require("../services/messageQueue.service");
 const { buildPaymentReceipt } = require("../services/messageBuilder.service");
 const { roundMoney } = require("../utils/money");
+const { gstinState } = require("../utils/gst");
 const Customer = require("../models/customer.model");
+
+function customerFields(input, existing) {
+  const gstin = input.gstin === undefined ? existing?.gstin : input.gstin;
+  if (!gstin) return input;
+  const state = gstinState(gstin);
+  if (input.state && input.state !== state) fail(400, "Customer state must match the GSTIN");
+  return { ...input, state };
+}
 
 async function create(req, res) {
   const existing = await Customer.findOne({ workspaceId: req.workspaceId, phone: req.body.phone });
   if (existing) return res.status(409).json({ error: "Customer with this phone already exists" });
 
-  const customer = await Customer.create({ ...req.body, workspaceId: req.workspaceId });
+  const customer = await Customer.create({
+    ...customerFields(req.body),
+    workspaceId: req.workspaceId,
+  });
   res.status(201).json(customer);
 }
 
@@ -42,7 +55,7 @@ async function autocomplete(req, res) {
     workspaceId: req.workspaceId,
     name: { $regex: `^${prefix}`, $options: "i" },
   })
-    .select("name phone isCreditCustomer vehicles")
+    .select("name phone isCreditCustomer vehicles gstin billingAddress state")
     .limit(10);
 
   res.json({ customers });
@@ -55,9 +68,12 @@ async function getById(req, res) {
 }
 
 async function update(req, res) {
+  const scope = { workspaceId: req.workspaceId, _id: req.params.id };
+  const before = await Customer.findOne(scope);
+  if (!before) fail(404, "Customer not found");
   const customer = await Customer.findOneAndUpdate(
-    { workspaceId: req.workspaceId, _id: req.params.id },
-    { $set: req.body },
+    scope,
+    { $set: customerFields(req.body, before) },
     { new: true, runValidators: true }
   );
   if (!customer) fail(404, "Customer not found");
@@ -97,7 +113,11 @@ async function recordPayment(req, res) {
         direction: "credit",
         createdBy: req.user.userId,
       },
-      context
+      context,
+      {
+        allowAdvance:
+          workspace.verticalType === "timber" && workspace.config?.allowAdvances === true,
+      }
     );
     await enqueue(
       {
@@ -181,8 +201,12 @@ async function outstanding(req, res) {
 
 async function remind(req, res) {
   const { workspaceId } = req;
-  const customer = await writePump(req, "vehicleNumber", async (context, workspace) => {
+  const customer = await atomic(workspaceId, async (context) => {
     const { session, compensate } = context;
+    const workspace = await lockWorkspace(workspaceId, context);
+    if (workspace.verticalType === "timber") checkTimber(workspace, "dimensions");
+    else checkPump(workspace, "vehicleNumber");
+    await assertCan(workspaceId, "write", { workspace, session });
     await assertCan(workspaceId, "feature:creditLedger", { workspace, session });
     const filter = { workspaceId, _id: req.params.id };
     const now = new Date();

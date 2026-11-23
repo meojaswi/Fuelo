@@ -11,7 +11,7 @@ function RoleSelect({ value, onChange }) {
   return (
     <select
       aria-label="Role"
-      className="control px-3 py-2 capitalize"
+      className="control min-h-11 px-3 py-2 capitalize"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >

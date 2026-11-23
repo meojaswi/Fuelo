@@ -13,7 +13,7 @@ const { randomUUID } = require("node:crypto");
 const { getVertical } = require("../config/verticals");
 
 function serialize(workspace, membership) {
-  const { _id, workspaceId, businessName, verticalType, config, language } = workspace;
+  const { _id, workspaceId, businessName, verticalType, config, language, taxProfile } = workspace;
   const vertical = getVertical(verticalType);
   return {
     id: _id,
@@ -24,6 +24,7 @@ function serialize(workspace, membership) {
     language,
     verticalFeatures: vertical.flags,
     verticalLabels: vertical.labels,
+    taxRegistered: taxProfile?.taxRegistered === true,
     billing: state(workspace),
     role: membership.role,
     permissions: permissionsFor(membership.role),

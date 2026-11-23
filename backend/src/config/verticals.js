@@ -31,8 +31,25 @@ const messages = {
   },
 };
 
-function definition(label, unit, items, flags = {}) {
-  return { items, labels: { item: label, unit }, flags, messages };
+const timberMessages = {
+  en: {
+    ...messages.en,
+    timberReceipt: ({ name, customer, lines, amount, payment }) =>
+      `${name}\n${customer}, timber sale:\n${lines}\nTotal: ₹${amount}\nPayment: ${payment}`,
+    purchase: ({ name, invoice, amount }) =>
+      `${name} received timber against invoice ${invoice}. Recorded total: ₹${amount}.`,
+  },
+  hi: {
+    ...messages.hi,
+    timberReceipt: ({ name, customer, lines, amount, payment }) =>
+      `${name}\n${customer}, aapki lakdi ki bikri:\n${lines}\nKul: ₹${amount}\nPayment: ${payment}`,
+    purchase: ({ name, invoice, amount }) =>
+      `${name} ko invoice ${invoice} ki lakdi mil gayi. Kul: ₹${amount}.`,
+  },
+};
+
+function definition(label, unit, items, flags = {}, wording = messages) {
+  return { items, labels: { item: label, unit }, flags, messages: wording };
 }
 const verticals = {
   fuel: definition(
@@ -41,7 +58,13 @@ const verticals = {
     { Diesel: "litres", Petrol: "litres", CNG: "kg" },
     { tanks: true, deliveries: true, shifts: true, vehicleNumber: true, pumpReports: true }
   ),
-  timber: definition("Timber", "cubic ft", { Teak: "cubic ft", Sal: "cubic ft", Pine: "cubic ft" }),
+  timber: definition(
+    "Timber",
+    "cubic ft",
+    { Teak: "cubic ft", Sal: "cubic ft", Pine: "cubic ft" },
+    { dimensions: true, suppliers: true, purchases: true, gst: true },
+    timberMessages
+  ),
   construction: definition("Material", "units", { Cement: "bags", Steel: "kg", Sand: "cubic ft" }),
   kirana: definition("Item", "units", {}),
   other: definition("Item", "units", {}),

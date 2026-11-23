@@ -10,7 +10,7 @@ import RecentTransactionList from "../components/dashboard/RecentTransactionList
 import SkeletonCard from "../components/shared/SkeletonCard";
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { summary, loading } = useDailySummary();
+  const { summary, loading, error } = useDailySummary();
   const { items } = useTransactions({ limit: 8, today: true });
   if (loading)
     return (
@@ -31,11 +31,16 @@ export default function DashboardPage() {
         </div>
         <Link
           to="/transactions/new"
-          className="hidden rounded-[8px] bg-fuelo-coral px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-95 sm:inline-flex"
+          className="hidden min-h-11 items-center rounded-[8px] bg-fuelo-coral px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-95 sm:inline-flex"
         >
           + Add transaction
         </Link>
       </div>
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          Could not load today’s summary. The figures below may be incomplete.
+        </p>
+      )}
       <DailySummaryCard summary={summary} />
       {user?.permissions?.includes("notifications:manage") && (
         <NotificationBanner
@@ -44,7 +49,7 @@ export default function DashboardPage() {
         />
       )}
       <div className="grid gap-7 lg:grid-cols-[.8fr_1.2fr]">
-        <section>
+        <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="mono-label">Inventory pulse</p>
@@ -53,19 +58,22 @@ export default function DashboardPage() {
             {user?.permissions?.includes("inventory:read") && (
               <Link
                 to="/inventory"
-                className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+                className="inline-flex min-h-11 items-center text-xs font-semibold text-slate-500 hover:text-slate-900"
               >
                 View inventory
               </Link>
             )}
           </div>
           <div className="panel p-5">
+            {!(summary?.items || []).length && (
+              <p className="text-sm text-slate-500">No stock movement recorded today.</p>
+            )}
             {(summary?.items || []).map((i) => (
               <ItemStatRow key={i.name} item={i} />
             ))}
           </div>
         </section>
-        <section>
+        <section className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="mono-label">Latest activity</p>
@@ -73,7 +81,7 @@ export default function DashboardPage() {
             </div>
             <Link
               to="/transactions"
-              className="flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900"
+              className="flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900"
             >
               View all <ArrowRight size={14} />
             </Link>

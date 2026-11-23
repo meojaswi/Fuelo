@@ -25,4 +25,22 @@ router.get(
   asyncHandler(daily)
 );
 
+router.get(
+  "/gst-summary",
+  requireAuth,
+  attachWorkspace,
+  requirePermission("reports:read"),
+  require("../middleware/timber.middleware").requireTimber("gst"),
+  asyncHandler(require("../controllers/gstReports.controller").summary)
+);
+
+router.get(
+  "/timber/:kind",
+  requireAuth,
+  attachWorkspace,
+  requirePermission("reports:read"),
+  require("../middleware/timber.middleware").requireTimber("dimensions"),
+  asyncHandler(require("../controllers/timberReports.controller").run)
+);
+
 module.exports = router;

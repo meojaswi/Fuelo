@@ -8,7 +8,7 @@ export default function LoginHeader() {
         <div className="flex min-w-0 items-center gap-2">
           <Link
             to="/"
-            className="shrink-0 font-mono font-extrabold tracking-[0.18em] transition hover:opacity-80"
+            className="inline-flex min-h-11 shrink-0 items-center font-mono font-extrabold tracking-[0.18em] transition hover:opacity-80"
           >
             <span className="text-[17px] text-white/70 sm:text-[18px]">fuelo</span>
             <span className="text-fuelo-coral">.</span>
@@ -26,14 +26,14 @@ export default function LoginHeader() {
         >
           <Link
             to="/pricing"
-            className="border border-fuelo-coral/40 px-2.5 py-1.5 text-white transition hover:border-fuelo-coral hover:bg-fuelo-coral/10 sm:px-4 sm:py-2"
+            className="inline-flex min-h-11 items-center border border-fuelo-coral/40 px-2.5 py-1.5 text-white transition hover:border-fuelo-coral hover:bg-fuelo-coral/10 sm:px-4 sm:py-2"
           >
             Pricing
           </Link>
 
           <Link
             to="/signup"
-            className="border border-fuelo-coral/40 px-2.5 py-1.5 text-white transition hover:border-fuelo-coral hover:bg-fuelo-coral/10 sm:px-4 sm:py-2"
+            className="inline-flex min-h-11 items-center border border-fuelo-coral/40 px-2.5 py-1.5 text-white transition hover:border-fuelo-coral hover:bg-fuelo-coral/10 sm:px-4 sm:py-2"
           >
             Sign up
           </Link>

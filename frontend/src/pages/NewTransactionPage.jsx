@@ -1,7 +1,13 @@
+import { lazy } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import TransactionForm from "../components/transactions/TransactionForm";
+const TimberSaleForm = lazy(() => import("../components/timber/TimberSaleForm"));
+
 export default function NewTransactionPage() {
   const n = useNavigate();
+  const { user } = useAuth();
+  const Form = user?.verticalFeatures?.dimensions ? TimberSaleForm : TransactionForm;
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-7">
@@ -12,7 +18,7 @@ export default function NewTransactionPage() {
         </p>
       </div>
       <div className="panel p-5 sm:p-7">
-        <TransactionForm onSaved={(d) => n(`/transactions/${d._id || d.id}`)} />
+        <Form key={user?.workspaceId} onSaved={(d) => n(`/transactions/${d._id || d.id}`)} />
       </div>
     </div>
   );

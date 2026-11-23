@@ -28,12 +28,18 @@ import TransactionListPage from "../pages/TransactionListPage";
 import TransactionDetailPage from "../pages/TransactionDetailPage";
 import MessagesPage from "../pages/MessagesPage";
 import WorkspacesPage from "../pages/WorkspacesPage";
-import SettingsPage from "../pages/SettingsPage";
 
 const pumpNav = [
   ["/pump/shifts", "Shifts", Clock3, "shifts", "shifts:operate"],
   ["/pump/tanks", "Tanks & Deliveries", Droplets, "tanks", "tanks:dip"],
   ["/pump/report", "Pump Report", BarChart3, "pumpReports", "reports:read"],
+];
+
+const timberNav = [
+  ["/timber/purchases", "Purchases", ClipboardList, "purchases", "purchases:read"],
+  ["/timber/suppliers", "Suppliers", Users, "suppliers", "suppliers:manage"],
+  ["/timber/invoices", "Invoices", List, "gst", "invoices:read"],
+  ["/timber/reports", "Timber Reports", BarChart3, "dimensions", "reports:read"],
 ];
 
 const routePermissions = {
@@ -56,6 +62,12 @@ const routePermissions = {
 const PumpShiftsPage = lazy(() => import("../pages/PumpShiftsPage"));
 const PumpTanksPage = lazy(() => import("../pages/PumpTanksPage"));
 const PumpReportPage = lazy(() => import("../pages/PumpReportPage"));
+const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const TimberInventoryPage = lazy(() => import("../pages/TimberInventoryPage"));
+const TimberSuppliersPage = lazy(() => import("../pages/TimberSuppliersPage"));
+const TimberPurchasesPage = lazy(() => import("../pages/TimberPurchasesPage"));
+const TimberInvoicesPage = lazy(() => import("../pages/TimberInvoicesPage"));
+const TimberReportsPage = lazy(() => import("../pages/TimberReportsPage"));
 const ReportsPage = lazy(() => import("../pages/ReportsPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
 const ActivityPage = lazy(() => import("../pages/ActivityPage"));
@@ -72,8 +84,15 @@ export default function AppShell() {
       can(permission) &&
       (path !== "/pump/tanks" || can("tanks:manage") || user?.config?.attendantsCanDip)
   );
+  const timberItems = timberNav.filter(
+    ([, , , flag, permission]) => user?.verticalFeatures?.[flag] && can(permission)
+  );
+  const operationItems = [...pumpItems, ...timberItems];
+  const Inventory = user?.verticalFeatures?.dimensions ? TimberInventoryPage : InventoryPage;
   const canVisit = (path) =>
-    path.startsWith("/pump/") ? pumpItems.some(([to]) => to === path) : can(routePermissions[path]);
+    path.startsWith("/pump/") || path.startsWith("/timber/")
+      ? operationItems.some(([to]) => to === path.replace(/\/:id$/, ""))
+      : can(routePermissions[path]);
   const access = (path, element) =>
     canVisit(path) ? element : <p role="alert">You do not have access to this page.</p>;
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -85,7 +104,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-white">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white md:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 overflow-y-auto border-r border-slate-200 bg-white md:block">
         <div className="flex h-16 items-center border-b px-6">
           <Link to="/" className="block hover:opacity-80 transition">
             <div className="text-lg font-extrabold tracking-tight">
@@ -98,6 +117,8 @@ export default function AppShell() {
           <div className="relative mb-7">
             <button
               type="button"
+              aria-expanded={workspaceMenuOpen}
+              aria-haspopup="true"
               onClick={() => setWorkspaceMenuOpen((open) => !open)}
               className="flex w-full items-center gap-2.5 rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-slate-100"
             >
@@ -168,7 +189,7 @@ export default function AppShell() {
                 <Link
                   to="/workspaces"
                   onClick={() => setWorkspaceMenuOpen(false)}
-                  className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 transition hover:text-fuelo-ink"
+                  className="flex min-h-11 items-center text-[10px] font-semibold uppercase tracking-wider text-slate-500 transition hover:text-fuelo-ink"
                 >
                   Manage workspaces →
                 </Link>
@@ -183,9 +204,9 @@ export default function AppShell() {
             <Item to="/inventory" icon={Package} label="Inventory" />
             <Item to="/credit" icon={Wallet} label="Credit / Udhaar" />
           </nav>
-          {pumpItems.length > 0 && (
-            <nav aria-label="Pump operations" className="mt-4 space-y-1">
-              {pumpItems.map(([path, label, Icon]) => (
+          {operationItems.length > 0 && (
+            <nav aria-label="Workspace operations" className="mt-4 space-y-1">
+              {operationItems.map(([path, label, Icon]) => (
                 <Item key={path} to={path} icon={Icon} label={label} allowed />
               ))}
             </nav>
@@ -201,7 +222,8 @@ export default function AppShell() {
         </div>
         <button
           onClick={logout}
-          className="absolute bottom-5 left-5 flex items-center gap-2 text-sm text-slate-500 hover:text-fuelo-coral"
+          type="button"
+          className="mx-5 mb-5 mt-3 flex min-h-11 items-center gap-2 text-sm text-slate-500 hover:text-fuelo-coral"
         >
           <LogOut size={16} /> Sign out
         </button>
@@ -210,17 +232,17 @@ export default function AppShell() {
         <TopBar />
         <div className="mx-auto max-w-[1400px] p-4 pb-24 md:p-8">
           <WorkspaceBillingNotice />
-          {pumpItems.length > 0 && (
+          {operationItems.length > 0 && (
             <nav
-              aria-label="Mobile pump operations"
+              aria-label="Mobile workspace operations"
               className="mb-4 flex gap-2 overflow-x-auto md:hidden"
             >
-              {pumpItems.map(([path, label]) => (
+              {operationItems.map(([path, label]) => (
                 <NavLink
                   key={path}
                   to={path}
                   className={({ isActive }) =>
-                    `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? "bg-fuelo-ink text-white" : "bg-slate-100 text-slate-700"}`
+                    `flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? "bg-fuelo-ink text-white" : "bg-slate-100 text-slate-700"}`
                   }
                 >
                   {label}
@@ -228,7 +250,13 @@ export default function AppShell() {
               ))}
             </nav>
           )}
-          <Suspense fallback={<p className="text-sm text-slate-500">Loading page…</p>}>
+          <Suspense
+            fallback={
+              <p role="status" className="text-sm text-slate-500">
+                Loading page…
+              </p>
+            }
+          >
             <Routes>
               <Route path="/" element={access("/", <DashboardPage />)} />
               <Route
@@ -255,10 +283,39 @@ export default function AppShell() {
                 path="/transactions/:id"
                 element={access("/transactions/:id", <TransactionDetailPage />)}
               />
+              <Route
+                path="/timber/purchases"
+                element={access(
+                  "/timber/purchases",
+                  <TimberPurchasesPage key={user?.workspaceId} />
+                )}
+              />
+              <Route
+                path="/timber/suppliers"
+                element={access(
+                  "/timber/suppliers",
+                  <TimberSuppliersPage key={user?.workspaceId} />
+                )}
+              />
+              <Route
+                path="/timber/invoices"
+                element={access("/timber/invoices", <TimberInvoicesPage key={user?.workspaceId} />)}
+              />
+              <Route
+                path="/timber/invoices/:id"
+                element={access(
+                  "/timber/invoices/:id",
+                  <TimberInvoicesPage key={user?.workspaceId} />
+                )}
+              />
+              <Route
+                path="/timber/reports"
+                element={access("/timber/reports", <TimberReportsPage key={user?.workspaceId} />)}
+              />
               <Route path="/members" element={access("/members", <MembersPage />)} />
               <Route
                 path="/inventory"
-                element={access("/inventory", <InventoryPage key={user?.workspaceId} />)}
+                element={access("/inventory", <Inventory key={user?.workspaceId} />)}
               />
               <Route path="/credit" element={access("/credit", <CreditPage />)} />
               <Route path="/credit/:id" element={access("/credit/:id", <CreditPage />)} />
@@ -291,7 +348,7 @@ function Item({ to, icon: Icon, label, allowed }) {
       to={to}
       end={to === "/" || to === "/transactions"}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-[8px] px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-fuelo-ink text-white" : "text-slate-600 hover:bg-slate-50"}`
+        `flex min-h-11 items-center gap-3 rounded-[8px] px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-fuelo-ink text-white" : "text-slate-600 hover:bg-slate-50"}`
       }
     >
       <Icon size={17} />

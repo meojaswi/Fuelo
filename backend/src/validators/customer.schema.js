@@ -1,10 +1,18 @@
+const { gstin, stateCode } = require("./timber.schema");
 const { normalizeVehicle } = require("../utils/vehicleNumber");
 const { z } = require("zod");
 const { MAX_MONEY, roundMoney } = require("../utils/money");
 
+const billing = {
+  gstin: gstin.nullable().optional(),
+  billingAddress: z.string().trim().max(500).optional(),
+  state: stateCode.nullable().optional(),
+};
+
 const createCustomerSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(10).max(15),
+  ...billing,
   isCreditCustomer: z.boolean().optional(),
 });
 
@@ -32,6 +40,7 @@ const updateCustomerSchema = z
       .transform(roundMoney)
       .nullable()
       .optional(),
+    ...billing,
     isCreditCustomer: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, { message: "Nothing to update" });

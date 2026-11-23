@@ -9,7 +9,7 @@ import Pagination from "../components/shared/Pagination";
 import EmptyState from "../components/shared/EmptyState";
 export default function TransactionListPage() {
   const [f, setF] = useState({ customer: "", itemTypes: [], page: 1 });
-  const { items, pages, loading } = useTransactions({
+  const { items, pages, loading, error } = useTransactions({
     page: f.page,
     customer: f.customer,
     itemTypes: f.itemTypes.join(","),
@@ -24,7 +24,7 @@ export default function TransactionListPage() {
         </div>
         <Link
           to="/transactions/new"
-          className="hidden items-center gap-2 rounded-[8px] bg-fuelo-coral px-4 py-2.5 text-sm font-semibold text-white sm:flex"
+          className="hidden min-h-11 items-center gap-2 rounded-[8px] bg-fuelo-coral px-4 py-2.5 text-sm font-semibold text-white sm:flex"
         >
           <Plus size={15} /> New
         </Link>
@@ -32,9 +32,14 @@ export default function TransactionListPage() {
       <div className="panel p-4">
         <FilterBar filters={f} setFilters={setF} />
       </div>
+      {error && (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      )}
       {loading ? (
         <div className="py-16 text-center text-sm text-slate-400">Loading ledger…</div>
-      ) : items.length ? (
+      ) : error ? null : items.length ? (
         <>
           <TransactionTable transactions={items} />
           <TransactionCardList transactions={items} />

@@ -3,6 +3,7 @@ export default function Button({
   variant = "primary",
   loading = false,
   className = "",
+  disabled = false,
   children,
   ...p
 }) {
@@ -15,9 +16,10 @@ export default function Button({
   };
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-[8px] px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${s[variant]} ${className}`}
-      disabled={loading || p.disabled}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[8px] px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${s[variant]} ${className}`}
       {...p}
+      disabled={loading || disabled}
+      aria-busy={loading || undefined}
     >
       {loading && <Loader2 size={15} className="animate-spin" />}
       {children}

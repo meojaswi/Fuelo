@@ -17,18 +17,31 @@ const map = {
   "/pump/tanks": "Tanks & Deliveries",
   "/pump/report": "Pump Report",
   "/settings/billing": "Billing",
+  "/timber/suppliers": "Suppliers",
+  "/timber/purchases": "Purchases",
+  "/timber/invoices": "Invoices",
+  "/timber/reports": "Timber Reports",
 };
 export default function TopBar() {
   const { user } = useAuth();
   const l = useLocation(),
     n = useNavigate(),
     back = l.pathname !== "/";
-  const title = l.pathname.startsWith("/credit/") ? "Customer ledger" : map[l.pathname] || "Page";
+  const title = l.pathname.startsWith("/credit/")
+    ? "Customer ledger"
+    : l.pathname.startsWith("/timber/invoices/")
+      ? "Invoice detail"
+      : map[l.pathname] || "Page";
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-8">
       <div className="flex items-center gap-3">
         {back && (
-          <button onClick={() => n(-1)} className="rounded-[8px] p-2 hover:bg-slate-100">
+          <button
+            type="button"
+            onClick={() => n(-1)}
+            aria-label="Go back"
+            className="grid h-11 w-11 place-items-center rounded-[8px] hover:bg-slate-100"
+          >
             <ArrowLeft size={17} />
           </button>
         )}
@@ -42,9 +55,13 @@ export default function TopBar() {
           {user?.role}
         </span>
         {user?.permissions?.includes("notifications:manage") && (
-          <button className="relative rounded-[8px] p-2.5 hover:bg-slate-100">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative grid h-11 w-11 place-items-center rounded-[8px] hover:bg-slate-100"
+          >
             <Bell size={18} />
-            <i className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-fuelo-coral" />
+            <i className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-fuelo-coral" />
           </button>
         )}
       </div>

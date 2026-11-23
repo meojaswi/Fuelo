@@ -8,6 +8,7 @@ import {
   sendDuesReminder,
   updateCustomer,
 } from "../api/customers.api";
+import TimberCustomers from "../components/timber/TimberCustomers";
 import Button from "../components/shared/Button";
 import EmptyState from "../components/shared/EmptyState";
 import Input from "../components/shared/Input";
@@ -36,6 +37,7 @@ export default function CreditPage() {
 }
 
 function Outstanding() {
+  const { user } = useAuth();
   const [days, setDays] = useState("");
   const [filter, setFilter] = useState("");
   const [result, setResult] = useState(null);
@@ -60,6 +62,9 @@ function Outstanding() {
         <p className="mono-label">Customer accounts</p>
         <h2 className="mt-2 text-2xl font-bold">Credit / Udhaar</h2>
       </header>
+      {user?.verticalFeatures?.dimensions && user?.permissions?.includes("customers:manage") && (
+        <TimberCustomers />
+      )}
       {error && (
         <p className="text-sm text-red-600" role="alert">
           {error}
@@ -75,6 +80,7 @@ function Outstanding() {
       >
         <Input
           label="Minimum days overdue"
+          inputMode="numeric"
           type="number"
           min="0"
           max="99999"
@@ -99,7 +105,7 @@ function Outstanding() {
                     to={`/credit/${customer._id}`}
                     className="flex items-center justify-between gap-4 p-4 hover:bg-slate-50"
                   >
-                    <div>
+                    <div className="min-w-0 break-words">
                       <p className="font-semibold">{customer.name}</p>
                       <p className="text-xs text-slate-500">{customer.phone}</p>
                       {customer.oldestUnpaidSaleDays != null && (
@@ -160,6 +166,7 @@ function CustomerLedger({ id }) {
   const customer = current?.customer;
   const ledger = current?.ledger;
   const balance = customer?.creditBalance ?? 0;
+  const allowAdvance = user?.verticalFeatures?.dimensions && user?.config?.allowAdvances;
   async function remind() {
     setReminding(true);
     setNotice(null);
@@ -177,7 +184,10 @@ function CustomerLedger({ id }) {
   }
   return (
     <section className="space-y-6">
-      <Link className="text-sm font-semibold text-fuelo-coral" to="/credit">
+      <Link
+        className="inline-flex min-h-11 items-center text-sm font-semibold text-fuelo-coral"
+        to="/credit"
+      >
         Back to Credit / Udhaar
       </Link>
       {!current && <p className="text-sm text-slate-500">Loading ledger…</p>}
@@ -201,13 +211,13 @@ function CustomerLedger({ id }) {
               <p className="text-xl font-bold">{formatCurrency(Math.abs(balance))}</p>
             </div>
             {balance > 0 &&
-              user?.verticalFeatures?.vehicleNumber &&
+              (user?.verticalFeatures?.vehicleNumber || user?.verticalFeatures?.dimensions) &&
               user?.permissions?.includes("credit:reminder") && (
                 <Button type="button" variant="secondary" loading={reminding} onClick={remind}>
                   Send dues reminder
                 </Button>
               )}
-            {balance > 0 && (
+            {(balance > 0 || allowAdvance) && user?.permissions?.includes("credit:payment") && (
               <Button type="button" onClick={() => setShowPayment(true)}>
                 Record payment
               </Button>
@@ -241,7 +251,7 @@ function CustomerLedger({ id }) {
                       )}
                       {entry.transactionId && (
                         <Link
-                          className="text-xs text-fuelo-coral"
+                          className="inline-flex min-h-11 items-center text-xs text-fuelo-coral"
                           to={`/transactions/${entry.transactionId}`}
                         >
                           View transaction
@@ -250,7 +260,11 @@ function CustomerLedger({ id }) {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="font-semibold">
-                        {entry.direction === "debit" ? "+" : "−"}
+                        {entry.affectsBalance === false
+                          ? ""
+                          : entry.direction === "debit"
+                            ? "+"
+                            : "−"}
                         {formatCurrency(entry.amount)}
                       </p>
                       <p className="text-xs text-slate-500">
@@ -272,6 +286,7 @@ function CustomerLedger({ id }) {
             <PaymentModal
               id={id}
               balance={balance}
+              allowAdvance={allowAdvance}
               onClose={() => setShowPayment(false)}
               onSaved={() => {
                 setShowPayment(false);
@@ -307,6 +322,7 @@ function CreditTerms({ customer }) {
     <form onSubmit={submit} className="panel flex flex-wrap items-end gap-3 p-4">
       <Input
         label="Credit terms (days)"
+        inputMode="numeric"
         type="number"
         min="0"
         max="3650"
@@ -326,7 +342,7 @@ function CreditTerms({ customer }) {
   );
 }
 
-function PaymentModal({ id, balance, onClose, onSaved }) {
+function PaymentModal({ id, balance, allowAdvance, onClose, onSaved }) {
   const [amount, setAmount] = useState("");
   const [paymentMode, setPaymentMode] = useState("cash");
   const [upiReference, setUpiReference] = useState("");
@@ -356,12 +372,15 @@ function PaymentModal({ id, balance, onClose, onSaved }) {
   return (
     <Modal open onClose={() => !saving && onClose()} title="Record payment">
       <form onSubmit={submit} className="space-y-4">
-        <p className="text-sm text-slate-500">Outstanding {formatCurrency(balance)}</p>
+        <p className="text-sm text-slate-500">
+          {balance < 0 ? "Customer credit" : "Outstanding"} {formatCurrency(Math.abs(balance))}
+        </p>
         <Input
           label="Amount"
           type="number"
+          inputMode="decimal"
           min="0.01"
-          max={balance}
+          max={allowAdvance ? undefined : balance}
           step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -370,7 +389,7 @@ function PaymentModal({ id, balance, onClose, onSaved }) {
         <label className="block space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">Payment mode</span>
           <select
-            className="control w-full px-3 py-2"
+            className="control min-h-11 w-full px-3 py-2"
             value={paymentMode}
             onChange={(e) => setPaymentMode(e.target.value)}
           >

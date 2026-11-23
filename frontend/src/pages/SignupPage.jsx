@@ -115,9 +115,8 @@ export default function SignupPage() {
             <div className="relative overflow-hidden bg-white p-7 sm:p-10">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-[0.035]"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(theme(colors.slate.900)_1px,transparent_1px)] opacity-[0.035]"
                 style={{
-                  backgroundImage: "radial-gradient(#0f172a 1px, transparent 1px)",
                   backgroundSize: "18px 18px",
                 }}
               />
@@ -166,7 +165,7 @@ export default function SignupPage() {
                         key={v.value}
                         type="button"
                         onClick={() => setVerticalType(v.value)}
-                        className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+                        className={`min-h-11 rounded-full border px-4 py-1.5 text-sm transition-colors ${
                           verticalType === v.value
                             ? "border-fuelo-coral bg-fuelo-coral/10 text-fuelo-coral"
                             : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -209,7 +208,10 @@ export default function SignupPage() {
 
               <p className="relative mt-6 text-center text-sm text-slate-500">
                 Already have a workspace?{" "}
-                <Link to="/login" className="font-medium text-fuelo-coral hover:underline">
+                <Link
+                  to="/login"
+                  className="inline-flex min-h-11 items-center font-medium text-fuelo-coral hover:underline"
+                >
                   Sign in
                 </Link>
               </p>

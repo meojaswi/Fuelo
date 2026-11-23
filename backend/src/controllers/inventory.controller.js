@@ -67,6 +67,8 @@ async function update(req, res) {
     await lockWorkspace(workspaceId, context);
     const previous = await Inventory.findOne(scope).session(session);
     if (!previous) fail(404, "Inventory item not found");
+    if (previous.pricingUnit && currentStock !== undefined)
+      fail(409, "Adjust timber stock with quantity and pieces together");
 
     const updates = {};
     const tracked =
@@ -156,6 +158,8 @@ async function remove(req, res) {
     await lockWorkspace(workspaceId, context);
     if (await Tank.exists(scope).session(session))
       fail(409, "Inventory linked to tanks cannot be removed");
+    if (await Inventory.exists({ ...scope, pricingUnit: { $type: "string" } }).session(session))
+      fail(409, "Configured timber inventory retains its stock history");
     const item = await Inventory.findOneAndDelete(scope, { session });
     if (!item) fail(404, "Inventory item not found");
     compensate(() => Inventory.create(item.toObject()));

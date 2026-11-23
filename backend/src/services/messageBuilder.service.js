@@ -7,6 +7,21 @@ function copy(workspace, template, values) {
 }
 
 function buildTransactionReceipt(tx, workspace) {
+  if (workspace.verticalType === "timber" && tx.lineItems?.length) {
+    const lines = tx.lineItems
+      .map(
+        (line) =>
+          `${line.itemType}: ${line.pieces} × ${[line.lengthFt && line.lengthFt + " ft", line.widthIn && line.widthIn + " in", line.thicknessIn && line.thicknessIn + " in"].filter(Boolean).join(" × ") || "pieces"} = ${line.quantity} ${line.unit}`
+      )
+      .join("\n");
+    return copy(workspace, "timberReceipt", {
+      name: workspace.businessName,
+      customer: tx.customerName,
+      lines,
+      amount: tx.amount.toFixed(2),
+      payment: tx.paymentMode.toUpperCase(),
+    });
+  }
   return copy(workspace, "receipt", {
     name: workspace.businessName,
     customer: tx.customerName,
@@ -80,7 +95,16 @@ function buildVarianceAlert(workspace, variance) {
   });
 }
 
+function buildPurchaseReceived(workspace, purchase) {
+  return copy(workspace, "purchase", {
+    name: workspace.businessName,
+    invoice: purchase.invoiceNumber,
+    amount: purchase.total.toFixed(2),
+  });
+}
+
 module.exports = {
+  buildPurchaseReceived,
   buildTransactionReceipt,
   buildEndOfDaySummary,
   buildPaymentReceipt,

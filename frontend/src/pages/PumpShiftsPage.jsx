@@ -89,7 +89,7 @@ export default function PumpShiftsPage() {
             <p>
               Credit sales so far <strong>{formatCurrency(active.creditSalesTotal)}</strong>
             </p>
-            <Button onClick={() => openWizard("close", active)}>Close shift</Button>
+            <Button type="button" onClick={() => openWizard("close", active)}>Close shift</Button>
           </div>
         ) : (
           <div className="panel space-y-3 p-5">
@@ -192,7 +192,7 @@ function Variance({ amount }) {
     <span
       className={`rounded-full px-3 py-1 text-sm font-semibold ${amount === 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-900"}`}
     >
-      Variance {formatCurrency(amount)}
+      Variance {formatCurrency(amount)} · {amount === 0 ? "Matches" : "Needs review"}
     </span>
   );
 }
@@ -254,6 +254,7 @@ function OpenForm({ nozzles, save, busy, error }) {
           key={row._id}
           label={`${row.label} opening meter (L)`}
           type="number"
+          inputMode="decimal"
           min="0"
           step="0.01"
           value={meters[row._id]}
@@ -323,6 +324,7 @@ function CloseForm({ shift, credit, save, busy, error }) {
           <Input
             label="Closing meter (L)"
             type="number"
+            inputMode="decimal"
             min={row.openingMeter}
             step="0.01"
             value={meters[row.nozzleId].closingMeter}
@@ -332,6 +334,7 @@ function CloseForm({ shift, credit, save, busy, error }) {
           <Input
             label="Test litres"
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.01"
             value={meters[row.nozzleId].testLitres}
@@ -343,8 +346,9 @@ function CloseForm({ shift, credit, save, busy, error }) {
         ([key, label]) => (
           <Input
             key={key}
-            label={`Declared ${label}`}
+            label={`Declared ${label} (₹)`}
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.01"
             value={payments[key]}

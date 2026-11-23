@@ -4,6 +4,7 @@ export default function QuantityInput({ value, onChange, unit = "litres" }) {
     <Input
       label={`Quantity · ${unit}`}
       type="number"
+      inputMode="decimal"
       min="0"
       step="0.01"
       value={value}

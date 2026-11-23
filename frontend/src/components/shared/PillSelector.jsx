@@ -11,7 +11,7 @@ export default function PillSelector({ options, value, onChange, multiple = fals
             onClick={() =>
               multiple ? onChange(active ? vals.filter((v) => v !== o) : [...vals, o]) : onChange(o)
             }
-            className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${active ? "border-fuelo-ink bg-fuelo-ink text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"}`}
+            className={`min-h-11 rounded-full border px-4 py-2 text-xs font-semibold transition ${active ? "border-fuelo-ink bg-fuelo-ink text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"}`}
           >
             {o}
           </button>

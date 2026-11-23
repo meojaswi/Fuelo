@@ -30,7 +30,7 @@ const fields = {
     ["invoiceNumber", "Invoice number", false, true],
     ["vehicleNumber", "Vehicle number", false, true],
     ["quantityLitres", "Quantity (L)", true],
-    ["ratePerLitre", "Rate per litre", true],
+    ["ratePerLitre", "Rate per litre (₹)", true],
   ],
   dip: [
     ["readingLitres", "Measured stock (L)", true],
@@ -288,7 +288,7 @@ function TankForm({ type, initialTank, tanks, submit, busy, error }) {
         <label className="block space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">Tank</span>
           <select
-            className="control w-full px-3 py-2"
+            className="control min-h-11 w-full px-3 py-2"
             value={tankId}
             onChange={(event) => setTankId(event.target.value)}
             required
@@ -306,6 +306,7 @@ function TankForm({ type, initialTank, tanks, submit, busy, error }) {
           key={key}
           label={label}
           type={numeric ? "number" : "text"}
+          inputMode={numeric ? "decimal" : undefined}
           min={
             numeric
               ? ["capacityLitres", "quantityLitres"].includes(key)
@@ -321,7 +322,7 @@ function TankForm({ type, initialTank, tanks, submit, busy, error }) {
         />
       ))}
       {type === "delivery" && (
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={override}

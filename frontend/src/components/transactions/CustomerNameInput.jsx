@@ -25,7 +25,7 @@ export default function CustomerNameInput({ value, onChange, onSelect }) {
                 else onChange(c.name);
                 setF(false);
               }}
-              className="block w-full rounded-[8px] px-3 py-2 text-left text-sm hover:bg-slate-50"
+              className="block min-h-11 w-full rounded-[8px] px-3 py-2 text-left text-sm hover:bg-slate-50"
             >
               {c.name}
               <span className="ml-2 font-mono text-[10px] text-slate-400">{c.phone}</span>

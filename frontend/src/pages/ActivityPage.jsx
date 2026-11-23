@@ -79,13 +79,13 @@ function Activity() {
             <ul className="panel divide-y divide-slate-100">
               {current.data.events.map((event) => (
                 <li key={event._id} className="flex flex-wrap justify-between gap-3 p-4">
-                  <div>
+                  <div className="min-w-0 break-words">
                     <p className="font-semibold">{event.summary || event.action}</p>
                     <p className="text-xs text-slate-500">
                       {event.actorName || event.actorUserId || "Account not verified"}
                       {event.actorRole && ` · ${event.actorRole}`}
                     </p>
-                    <p className="text-xs text-slate-400">{event.action}</p>
+                    <p className="break-all text-xs text-slate-400">{event.action}</p>
                   </div>
                   <time className="text-xs text-slate-500" dateTime={event.createdAt}>
                     {formatDate(event.createdAt, {

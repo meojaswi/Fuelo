@@ -14,7 +14,12 @@ export default function Modal({ open, onClose, title, children }) {
             <span className="mono-label">Fuelo</span>
             <h2 className="mt-1 text-lg font-bold">{title}</h2>
           </div>
-          <button onClick={onClose} className="rounded-[8px] p-2 text-slate-400 hover:bg-slate-100">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-11 w-11 place-items-center rounded-[8px] text-slate-400 hover:bg-slate-100"
+          >
             ×
           </button>
         </div>

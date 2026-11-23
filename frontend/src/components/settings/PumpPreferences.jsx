@@ -42,7 +42,7 @@ export default function PumpPreferences() {
         <label className="block space-y-1">
           <span className="text-sm font-semibold">Message language</span>
           <select
-            className="control w-full px-3 py-2"
+            className="control min-h-11 w-full px-3 py-2"
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
           >
@@ -55,6 +55,7 @@ export default function PumpPreferences() {
             <Input
               label="Shift variance alert threshold (₹)"
               type="number"
+              inputMode="decimal"
               min="0"
               step="0.01"
               value={threshold}
@@ -64,6 +65,7 @@ export default function PumpPreferences() {
             <Input
               label="Dip variance threshold (% of throughput)"
               type="number"
+              inputMode="decimal"
               min="0"
               max="100"
               step="0.01"
@@ -71,7 +73,7 @@ export default function PumpPreferences() {
               onChange={(e) => setPercent(e.target.value)}
               required
             />
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex min-h-11 items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={attendantsCanDip}

@@ -6,6 +6,13 @@ const inventorySchema = new mongoose.Schema(
     workspaceId: { type: String, required: true },
     itemType: { type: String, required: true },
     currentStock: { type: Number, required: true, default: 0 },
+    currentPieces: { type: Number, default: 0 },
+    species: String,
+    grade: String,
+    pricingUnit: { type: String, enum: require("../utils/timber").pricingUnits },
+    defaultThicknessIn: Number,
+    hsnCode: String,
+    gstRatePercent: Number,
     unit: { type: String, required: true }, // litres, kg, cubic ft, bags, etc.
     pricePerUnit: { type: Number, required: true, default: 0 },
     lastPriceUpdate: { type: Date, default: Date.now },

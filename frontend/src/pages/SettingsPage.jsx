@@ -4,8 +4,11 @@ import { AlertCircle, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { updateDealerRequest } from "../api/dealer.api";
 import { updatePasswordRequest } from "../api/auth.api";
+import { lazy } from "react";
 import PumpPreferences from "../components/settings/PumpPreferences";
 import Button from "../components/shared/Button";
+
+const TaxProfileForm = lazy(() => import("../components/timber/TaxProfileForm"));
 
 export default function SettingsPage() {
   const { user, updateSession } = useAuth();
@@ -131,27 +134,34 @@ export default function SettingsPage() {
             <h3 className="font-bold text-lg mb-4">Business Profile</h3>
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-1">Business Name</label>
+                <label htmlFor="settings-business-name" className="block text-sm font-semibold mb-1">
+                  Business Name
+                </label>
                 <input
                   type="text"
                   required
+                  id="settings-business-name"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1 text-slate-500">
+                <label
+                  htmlFor="settings-vertical-type"
+                  className="mb-1 block text-sm font-semibold text-slate-500"
+                >
                   Vertical Type (Read-only)
                 </label>
                 <input
                   type="text"
+                  id="settings-vertical-type"
                   value={user?.verticalType || ""}
                   disabled
                   className="w-full rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 uppercase tracking-wide cursor-not-allowed"
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex min-h-11 items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={allowNegativeStock}
@@ -172,7 +182,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={profileLoading}>
+                <Button type="submit" loading={profileLoading}>
                   Save Changes
                 </Button>
               </div>
@@ -199,9 +209,11 @@ export default function SettingsPage() {
                   >
                     <span className="font-medium text-sm">{item}</span>
                     <button
+                      type="button"
+                      aria-label={`Remove ${item}`}
                       onClick={() => handleRemoveItem(idx)}
                       disabled={itemsLoading}
-                      className="text-slate-400 hover:text-red-500 transition"
+                      className="grid h-11 w-11 shrink-0 place-items-center text-slate-400 hover:text-red-500 transition"
                       title="Remove item"
                     >
                       <Trash2 size={16} />
@@ -212,19 +224,23 @@ export default function SettingsPage() {
             </div>
 
             <form onSubmit={handleAddItem} className="flex items-end gap-3">
-              <div className="flex-1">
-                <label className="block text-sm font-semibold mb-1">Add New Item</label>
+              <div className="min-w-0 flex-1">
+                <label htmlFor="settings-new-item" className="block text-sm font-semibold mb-1">
+                  Add New Item
+                </label>
                 <input
                   type="text"
+                  id="settings-new-item"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="e.g. Diesel, Grade A Timber"
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                 />
               </div>
               <Button
                 type="submit"
-                disabled={itemsLoading || !newItemName.trim()}
+                loading={itemsLoading}
+                disabled={!newItemName.trim()}
                 className="flex items-center gap-2"
               >
                 <Plus size={16} /> Add
@@ -246,33 +262,45 @@ export default function SettingsPage() {
         </>
       )}
       {user?.permissions?.includes("billing:manage") && (
-        <Link className="block font-semibold text-fuelo-coral" to="/settings/billing">
+        <Link
+          className="inline-flex min-h-11 items-center font-semibold text-fuelo-coral"
+          to="/settings/billing"
+        >
           Manage billing
         </Link>
       )}
       {user?.permissions?.includes("settings:manage") && <PumpPreferences key={user.workspaceId} />}
+      {user?.permissions?.includes("settings:manage") && user?.verticalFeatures?.gst && (
+        <TaxProfileForm key={user.workspaceId} />
+      )}
       {/* Security */}
       <div className="panel p-6 border-red-100">
         <h3 className="font-bold text-lg mb-4 text-red-600">Security</h3>
         <form onSubmit={handleSecuritySubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold mb-1">Current Password</label>
+            <label htmlFor="settings-current-password" className="block text-sm font-semibold mb-1">
+              Current Password
+            </label>
             <input
               type="password"
               required
+              id="settings-current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
+              className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1">New Password</label>
+            <label htmlFor="settings-new-password" className="block text-sm font-semibold mb-1">
+              New Password
+            </label>
             <input
               type="password"
               required
+              id="settings-new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
+              className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
             />
           </div>
           {securityMessage && (
@@ -290,7 +318,7 @@ export default function SettingsPage() {
           <div className="flex justify-end pt-2">
             <Button
               type="submit"
-              disabled={securityLoading}
+              loading={securityLoading}
               className="!bg-red-600 hover:!bg-red-700"
             >
               Change Password

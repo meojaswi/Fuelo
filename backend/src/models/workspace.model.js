@@ -12,6 +12,7 @@ const schema = new mongoose.Schema(
       enum: ["fuel", "timber", "construction", "kirana", "other"],
     },
     language: { type: String, enum: ["en", "hi"], default: "hi" },
+    taxProfile: mongoose.Schema.Types.Mixed,
     config: { type: mongoose.Schema.Types.Mixed, default: {} },
     isActive: { type: Boolean, default: true },
     writeVersion: { type: Number, default: 0, select: false },

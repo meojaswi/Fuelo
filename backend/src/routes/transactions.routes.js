@@ -10,6 +10,16 @@ const {
   voidTransactionSchema,
 } = require("../validators/transaction.schema");
 
+const { timberSale } = require("../validators/timber.schema");
+const validateLegacySale = validateBody(createTransactionSchema);
+const validateTimberSale = validateBody(timberSale);
+
+function validateSale(req, res, next) {
+  const validate =
+    req.body && Object.hasOwn(req.body, "lineItems") ? validateTimberSale : validateLegacySale;
+  return validate(req, res, next);
+}
+
 const linksController = require("../controllers/links.controller");
 const asyncHandler = require("../middleware/asyncHandler.middleware");
 
@@ -19,7 +29,7 @@ router.use(requireAuth, attachWorkspace);
 
 router.post(
   "/",
-  validateBody(createTransactionSchema),
+  validateSale,
   requirePermission("transactions:create"),
   asyncHandler(controller.create)
 );

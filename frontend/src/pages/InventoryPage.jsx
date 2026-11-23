@@ -9,6 +9,7 @@ import {
 import Button from "../components/shared/Button";
 import SkeletonCard from "../components/shared/SkeletonCard";
 import { useAuth } from "../context/AuthContext";
+import { formatCurrency, formatDate as formatDateTime, formatQuantity } from "../utils/formatters";
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function InventoryPage() {
   const [editIdx, setEditIdx] = useState(null);
   const [editValues, setEditValues] = useState({ currentStock: "", pricePerUnit: "" });
   const [editLoading, setEditLoading] = useState(false);
+  const [deletingIdx, setDeletingIdx] = useState(null);
 
   async function loadInventory() {
     setLoading(true);
@@ -111,7 +113,9 @@ export default function InventoryPage() {
 
   async function handleDelete(idx) {
     const item = items[idx];
+    if (deletingIdx !== null) return;
     if (!window.confirm(`Delete "${item.itemType}" from inventory?`)) return;
+    setDeletingIdx(idx);
     setMessage(null);
     try {
       await deleteInventoryItem(item.itemType);
@@ -122,18 +126,13 @@ export default function InventoryPage() {
         type: "error",
         text: err.response?.data?.error || "Failed to delete.",
       });
+    } finally {
+      setDeletingIdx(null);
     }
   }
 
-  function formatDate(d) {
-    if (!d) return "—";
-    return new Date(d).toLocaleString("en-IN", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
+  const formatDate = (d) =>
+    formatDateTime(d, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   if (loading) {
     return (
@@ -199,6 +198,8 @@ export default function InventoryPage() {
                         <td className="px-5 py-3 text-right">
                           <input
                             type="number"
+                            inputMode="decimal"
+                            aria-label={`Current stock of ${item.itemType} in ${item.unit}`}
                             value={editValues.currentStock}
                             onChange={(e) =>
                               setEditValues((v) => ({
@@ -206,7 +207,7 @@ export default function InventoryPage() {
                                 currentStock: e.target.value,
                               }))
                             }
-                            className="w-24 rounded-[6px] border border-slate-200 px-2 py-1 text-right text-sm focus:border-fuelo-ink focus:outline-none"
+                            className="min-h-11 w-24 rounded-[6px] border border-slate-200 px-2 py-1 text-right text-sm focus:border-fuelo-ink focus:outline-none"
                           />
                           <span className="ml-1 text-slate-400 text-xs">{item.unit}</span>
                         </td>
@@ -214,6 +215,8 @@ export default function InventoryPage() {
                           <span className="text-slate-400 mr-1">₹</span>
                           <input
                             type="number"
+                            inputMode="decimal"
+                            aria-label={`Price per ${item.unit} for ${item.itemType}`}
                             step="0.01"
                             value={editValues.pricePerUnit}
                             onChange={(e) =>
@@ -222,7 +225,7 @@ export default function InventoryPage() {
                                 pricePerUnit: e.target.value,
                               }))
                             }
-                            className="w-24 rounded-[6px] border border-slate-200 px-2 py-1 text-right text-sm focus:border-fuelo-ink focus:outline-none"
+                            className="min-h-11 w-24 rounded-[6px] border border-slate-200 px-2 py-1 text-right text-sm focus:border-fuelo-ink focus:outline-none"
                           />
                         </td>
                         <td className="px-5 py-3 text-slate-400 text-xs">
@@ -233,15 +236,17 @@ export default function InventoryPage() {
                             <button
                               onClick={handleSaveEdit}
                               disabled={editLoading}
-                              className="grid h-8 w-8 place-items-center rounded-[6px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
+                              className="grid h-11 w-11 place-items-center rounded-[6px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
                               title="Save"
+                              aria-label={`Save ${item.itemType}`}
                             >
                               <Save size={14} />
                             </button>
                             <button
                               onClick={() => setEditIdx(null)}
-                              className="grid h-8 w-8 place-items-center rounded-[6px] bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
+                              className="grid h-11 w-11 place-items-center rounded-[6px] bg-slate-100 text-slate-500 hover:bg-slate-200 transition"
                               title="Cancel"
+                              aria-label="Cancel editing"
                             >
                               <X size={14} />
                             </button>
@@ -254,11 +259,11 @@ export default function InventoryPage() {
                           <span className="font-semibold">{item.itemType}</span>
                         </td>
                         <td className="px-5 py-3 text-right font-mono">
-                          {item.currentStock.toLocaleString("en-IN")}
+                          {formatQuantity(item.currentStock, 3)}
                           <span className="ml-1 text-slate-400 text-xs">{item.unit}</span>
                         </td>
                         <td className="px-5 py-3 text-right font-mono">
-                          ₹{item.pricePerUnit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {formatCurrency(item.pricePerUnit)}
                           <span className="ml-1 text-slate-400 text-xs">/{item.unit}</span>
                         </td>
                         <td className="px-5 py-3 text-slate-400 text-xs">
@@ -271,15 +276,18 @@ export default function InventoryPage() {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => startEdit(idx)}
-                              className="grid h-8 w-8 place-items-center rounded-[6px] text-slate-400 hover:bg-slate-100 hover:text-fuelo-ink transition"
+                              className="grid h-11 w-11 place-items-center rounded-[6px] text-slate-400 hover:bg-slate-100 hover:text-fuelo-ink transition"
                               title="Edit"
+                              aria-label={`Edit ${item.itemType}`}
                             >
                               <Pencil size={14} />
                             </button>
                             <button
                               onClick={() => handleDelete(idx)}
-                              className="grid h-8 w-8 place-items-center rounded-[6px] text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
+                              className="grid h-11 w-11 place-items-center rounded-[6px] text-slate-400 hover:bg-red-50 hover:text-red-500 transition"
                               title="Delete"
+                              aria-label={`Delete ${item.itemType}`}
+                              disabled={deletingIdx !== null}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -308,22 +316,24 @@ export default function InventoryPage() {
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold mb-1">Item Name</label>
+                <label htmlFor="inv-item-name" className="mb-1 block text-sm font-semibold">Item Name</label>
                 <input
                   type="text"
                   required
+                  id="inv-item-name"
                   value={newItem.itemType}
                   onChange={(e) => setNewItem((n) => ({ ...n, itemType: e.target.value }))}
                   placeholder="e.g. Petrol, Diesel, Teak"
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Unit</label>
+                <label htmlFor="inv-unit" className="mb-1 block text-sm font-semibold">Unit</label>
                 <select
+                  id="inv-unit"
                   value={newItem.unit}
                   onChange={(e) => setNewItem((n) => ({ ...n, unit: e.target.value }))}
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none bg-white"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none bg-white"
                 >
                   <option value="litres">Litres</option>
                   <option value="kg">Kilograms</option>
@@ -336,24 +346,28 @@ export default function InventoryPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold mb-1">Current Stock</label>
+                <label htmlFor="inv-stock" className="mb-1 block text-sm font-semibold">Current Stock</label>
                 <input
                   type="number"
+                  inputMode="decimal"
+                  id="inv-stock"
                   value={newItem.currentStock}
                   onChange={(e) => setNewItem((n) => ({ ...n, currentStock: e.target.value }))}
                   placeholder="e.g. 2000"
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Price per Unit (₹)</label>
+                <label htmlFor="inv-price" className="mb-1 block text-sm font-semibold">Price per Unit (₹)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
+                  id="inv-price"
                   value={newItem.pricePerUnit}
                   onChange={(e) => setNewItem((n) => ({ ...n, pricePerUnit: e.target.value }))}
                   placeholder="e.g. 106.31"
-                  className="w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
+                  className="min-h-11 w-full rounded-[8px] border border-slate-200 px-3 py-2 text-sm focus:border-fuelo-ink focus:outline-none"
                 />
               </div>
             </div>
@@ -361,7 +375,7 @@ export default function InventoryPage() {
               <Button type="button" variant="secondary" onClick={() => setShowAdd(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={addLoading}>
+              <Button type="submit" loading={addLoading}>
                 Add to Inventory
               </Button>
             </div>

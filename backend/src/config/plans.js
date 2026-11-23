@@ -4,6 +4,7 @@ const trialLimits = {
   maxWorkspaces: 2,
   features: {
     pumpPack: true,
+    timberPack: true,
     reports: true,
     creditLedger: true,
     csvExport: true,
@@ -22,6 +23,7 @@ const plans = [
       maxWorkspaces: 1,
       features: {
         pumpPack: false,
+        timberPack: false,
         reports: false,
         creditLedger: false,
         csvExport: false,
@@ -39,9 +41,10 @@ const plans = [
       maxWorkspaces: 2,
       features: {
         pumpPack: true,
+        timberPack: true,
         reports: true,
         creditLedger: true,
-        csvExport: false,
+        csvExport: true,
         pdfReceipts: true,
       },
     },
@@ -56,6 +59,7 @@ const plans = [
       maxWorkspaces: 5,
       features: {
         pumpPack: true,
+        timberPack: true,
         reports: true,
         creditLedger: true,
         csvExport: true,

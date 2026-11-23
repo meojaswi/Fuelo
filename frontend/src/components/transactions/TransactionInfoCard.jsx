@@ -3,7 +3,7 @@ export default function TransactionInfoCard({ transaction: t }) {
   const rows = [
     ["Customer", t.customerName],
     ["Item", t.itemType],
-    ["Quantity", formatQuantity(t.quantity)],
+    ["Quantity", `${formatQuantity(t.quantity)} ${t.unit ?? ""}`.trim()],
     ["Amount", formatCurrency(t.amount)],
     ["Payment", t.paymentMode],
     ["Date", formatDate(t.createdAt || t.date, { dateStyle: "medium", timeStyle: "short" })],

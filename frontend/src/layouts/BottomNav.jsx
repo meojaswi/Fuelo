@@ -11,7 +11,10 @@ export default function BottomNav() {
     ["/messages", "Messages", MessageSquare, "notifications:manage"],
   ].filter(([, , , permission]) => !permission || user?.permissions?.includes(permission));
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden">
+    <nav
+      aria-label="Main"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white md:hidden"
+    >
       <div
         className="grid"
         style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}

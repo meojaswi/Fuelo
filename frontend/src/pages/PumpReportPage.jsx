@@ -108,12 +108,12 @@ export default function PumpReportPage() {
                       >
                         {[
                           shift.openedByName || "Staff",
-                          shift.hours,
-                          shift.litres,
+                          `${formatQuantity(shift.hours)} h`,
+                          `${formatQuantity(shift.litres)} L`,
                           formatCurrency(shift.expectedSalesTotal),
                           formatCurrency(shift.declaredTotal),
                           formatCurrency(shift.creditSalesTotal),
-                          formatCurrency(shift.variance),
+                          `${formatCurrency(shift.variance)}${shift.variance ? " · Needs review" : ""}`,
                         ].map((value, i) => (
                           <td key={i} className="whitespace-nowrap p-3">
                             {value}

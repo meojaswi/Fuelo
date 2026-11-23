@@ -2,7 +2,7 @@
 
 The entry point for understanding the app. It describes what happens, from a visitor opening the site to a nightly summary landing on WhatsApp. For testing, see [QA.md](QA.md). For backend setup, see [backend/README.md](backend/README.md).
 
-> Status: this describes Phases 0 through 3a as built. Section 15 lists planned work. Phase 2 was verified with local backend tests and a Chrome smoke test. Phase 3a passed local backend tests in both MongoDB modes and a Chrome workflow check. Live Twilio delivery, live Razorpay Checkout and hosted CI for this working tree remain unverified. Use QA.md to track staging checks.
+> Status: this describes Phases 0 through 3b as built. Section 16 lists planned work. Phase 2 was verified with local backend tests and a Chrome smoke test. Phases 3a and 3b passed local backend tests in both MongoDB modes and Chrome workflow checks. Live Twilio delivery, live Razorpay Checkout and hosted CI for this working tree remain unverified. Use QA.md to track staging checks.
 
 ---
 
@@ -171,6 +171,10 @@ Any action → MessageJob(status: pending) ──► every 30s: drain
 | View shift history and reopen latest eligible shift | No | Yes | Yes |
 | Record and review dips | Own dips today when enabled | Yes | Yes |
 | Run the daily pump report and queue fleet dues reminders | No | Yes | Yes |
+| Enter a dimension-based timber sale | Yes | Yes | Yes |
+| Configure timber inventory, record purchases, and manage suppliers and payables | No | Yes | Yes |
+| View timber invoices and issue credit notes | No | Yes | Yes |
+| Configure tax profile and per-item HSN and GST rates | No | No | Yes |
 | View members | ❌ | ✅ | ✅ |
 | Manage members, billing, settings, audit log, delete workspace | ❌ | ❌ | ✅ |
 
@@ -202,10 +206,10 @@ active ──(payment fails)──► past_due (3-day grace) ──► read-only
 
 | Tier | Monthly sales cap | Seats | Owned workspaces | Active plan features |
 |---|---:|---:|---:|---|
-| Trial | 100 | 3 | 2 | Credit writes, reports, CSV, PDF, pump pack |
+| Trial | 100 | 3 | 2 | Credit writes, reports, CSV, PDF, pump pack and timber pack |
 | Starter | 300 | 1 | 1 | Core sales and receipts |
-| Growth | 1,500 | 5 | 2 | Credit writes, reports, PDF, pump pack |
-| Business | Unlimited | 15 | 5 | Credit writes, reports, CSV, PDF, pump pack |
+| Growth | 1,500 | 5 | 2 | Credit writes, reports, CSV, PDF, pump pack and timber pack |
+| Business | Unlimited | 15 | 5 | Credit writes, reports, CSV, PDF, pump pack and timber pack |
 
 The frontend opens an upgrade modal for a `402` with `upgradeRequired: true`. Owners use `/settings/billing` for usage and renewal status (`GET /api/billing/status`) and cycle-end cancellation (`POST /api/billing/cancel`). Checkout relies on a signed webhook to activate the plan. Razorpay calls and revenue sharing were tested with fixtures and mocks. Live checkout and transfers remain unverified.
 
@@ -235,10 +239,13 @@ The frontend opens an upgrade modal for a `402` with `upgradeRequired: true`. Ow
 | `/members` | Team, invites | Owner (manager can view) |
 | `/activity` | Audit log | Owner |
 | `/workspaces` | Switch workspaces for active memberships. Owners can create or deactivate owned workspaces within the applicable limits. | All roles for switching, owner for changes |
-| `/settings` | Password change, workspace message language, and pump thresholds and attendant dip access where applicable | All roles for password change, owner for workspace settings |
+| `/settings` | Password change, message language, pump settings, or timber tax settings and advance access where applicable | All roles for password change, owner for workspace settings |
 | `/pump/shifts` | Open and close shifts, preview variance, and view shift history | Owners and managers, attendants for their own open shift |
 | `/pump/tanks` | Tank gauges, nozzle setup, deliveries and dips | Owners and managers, attendants for dips when enabled |
 | `/pump/report` | IST daily pump reconciliation and eligible CSV export | Owner, manager |
+| `/timber/purchases`, `/timber/suppliers` | Receive woods by dimension, browse bills, settle supplier balances | Owner, manager |
+| `/timber/invoices`, `/timber/invoices/:id` | Invoice list, PDF, and credit note | Owner, manager |
+| `/timber/reports` | Timber stock, sales by species, FIFO aging, profit estimate, GST summary and eligible CSV | Owner, manager |
 | `/settings/billing` | Plan, usage, and cancellation | Owner |
 
 `AppShell` protects workspace pages and hides navigation unavailable to the current role. Public account, pricing, invite and receipt pages are separate.
@@ -269,27 +276,52 @@ Sales recorded during the open shift carry `shiftId`. At close, net meter litres
 
 `GET` and `POST /api/tanks/:id/dips` list or record physical readings. Managers and owners can record dips. When enabled, attendants can record and review their own dips for the current IST day. The variance compares each physical reading with book stock at the time it was recorded.
 
-`GET /api/reports/pump-daily?date=YYYY-MM-DD` reconciles tank and item opening, deliveries, individual sales, net meter adjustments and closing stock. It also lists closed shift summaries. Voided records are excluded from the sales and deliveries columns. Their dated stock postings appear under adjustments so book balances still reconcile. Same-day void postings net to zero. Meter totals describe physical volume, while meter adjustments explain only the stock effect at close. CSV uses the existing export entitlement, included in trial and Business. The alert threshold defaults to 0.5% of posted throughput. This report is a decision aid.
+`GET /api/reports/pump-daily?date=YYYY-MM-DD` reconciles tank and item opening, deliveries, individual sales, net meter adjustments and closing stock. It also lists closed shift summaries. Voided records are excluded from the sales and deliveries columns. Their dated stock postings appear under adjustments so book balances still reconcile. Same-day void postings net to zero. Meter totals describe physical volume, while meter adjustments explain only the stock effect at close. CSV uses the existing export entitlement, included in Trial, Growth and Business. The alert threshold defaults to 0.5% of posted throughput. This report is a decision aid.
 
 ### Fleet credit
 
 Fuel sales may include a normalized vehicle number. Credit sales save the number to the customer's fleet. The outstanding report applies ledger payments FIFO, removes voided charges, and reports the oldest unpaid sale's age in IST days. `minDaysOverdue` applies the customer's optional credit terms. Owners and managers with the pump pack can queue `POST /api/customers/:id/reminder` once per 24 hours per customer. Reminders use the workspace's message language and are audited. Live delivery remains unverified.
 
-## 15. Planned (not built yet)
+## 15. Phase 3b: Timber pack
+
+### Timber items and dimensions
+
+`GET /api/timber/items` lists timber items for sale entry. Managers and owners configure species, grade and pricing unit with `PUT /api/timber/items`. The stock adjustment route records a reason and updates quantity and pieces together. Timber transactions price each line using server-computed dimensions, then add charges. The stock service decrements and reverses both balances on sale and void.
+
+### Purchases, suppliers and payables
+
+Owners and managers add, edit and deactivate suppliers under `/api/suppliers`. Opening balances are ledger adjustments. The ledger records purchases, payments and void reversals. A payment beyond the balance needs the explicit advance flag. A purchase under `/api/purchases` adds quantities and pieces and posts its payable. Voiding restores the stock position and reverses the amount billed. Recorded payments remain in the supplier ledger and can leave an advance.
+
+### Part payments and advances
+
+A timber part payment is recorded against the sale for reference. Only the unpaid amount enters the balance as a credit sale. The `allowAdvances` setting allows customer payments beyond dues. New credit sales automatically consume available customer credit and record the applied amount in the ledger. On void, the unpaid charge reverses and collected cash is retained as customer credit.
+
+### Tax profiles, invoices and credit notes
+
+Owners configure `/api/timber/tax-profile` and each item's HSN and GST rate. GSTINs are format- and checksum-validated. The registered profile and configured rates are copied to immutable invoice data along with buyer and place of supply. Same-state supply splits tax between CGST and SGST, with one paise assigned to CGST when an odd amount cannot be divided exactly. Other-state supply uses IGST. The invoice shows round-off to the nearest rupee. Each financial year starts on April 1 IST, and invoices and credit notes use separate sequences.
+
+The invoice list and PDF are under `/api/invoices`. The existing sale void action handles bills of supply. Tax invoices require `POST /api/invoices/:id/credit-note`, which reverses stock and ledger effects and keeps the original number in history. The GST summary under `/api/reports/gst-summary` shows issued invoice and credit-note tax effects for the selected dates, including a negative entry for a credit note in its own period. It is a working summary for the accountant. Tax settings and document formats require the business's CA review.
+
+### Timber reports and messages
+
+`/api/reports/timber/:kind` returns current stock, sales by species and pricing unit, FIFO customer and supplier aging (using the supplier invoice date for purchase balances), or estimated margin using the weighted-average purchase cost through the end of the selected period. CSV uses the export entitlement. Profit estimates leave cost and margin blank where no purchase cost is recorded. Timber adds deterministic English and Hinglish dimensions receipts and purchase acknowledgements to the WhatsApp queue and uses the existing payment and dues messages. Live delivery remains unverified.
+
+Timber navigation uses the workspace flags and role permissions. Timber inventory and the sale form use the existing Inventory and New transaction routes. Tax preview uses `POST /api/timber/sale-quote` and the same calculation as invoice creation. The Trial, Growth and Business snapshots include timber access. Starter feature requests return the existing 402 upgrade response.
+
+## 16. Planned (not built yet)
 
 | Phase | What | Notes |
 |---|---|---|
-| **3b** | Timber pack: dimension-based quantity (cubic ft), per-grade pricing, purchases/suppliers, transport charges, part payments, **GST invoices** | |
 | **1.5** | Daily fuel-price feed: provider layer, `FuelPrice` store, suggest-and-confirm per workspace | Needs a vendor decision; there is no official API |
 | Later | Super-admin panel, onboarding wizard, usage metering, monitoring (Sentry), backups, migrations tooling, construction and real-estate modules | |
 
 ---
 
-## 16. Deployment checklist (summary)
+## 17. Deployment checklist (summary)
 
 1. MongoDB Atlas (replica set), database user, IP access list.
 2. Configure `MONGO_URI`, `JWT_SECRET` (32+ characters), `CORS_ORIGINS`, `PUBLIC_APP_URL`, Twilio, Razorpay and `RAZORPAY_PLAN_*`. Set `TRUST_PROXY_HOPS` to match the actual proxy path.
 3. From `backend/`, run `node scripts/migrateToMemberships.js --dry-run`. Review the counts before applying the migration with `node scripts/migrateToMemberships.js`.
-4. Seed test-mode plans with `node scripts/seedPlans.js`, including the updated Growth and Business pump pack snapshots. Configure the optional Hinglish Twilio Content SIDs listed in [QA.md](QA.md) for staging delivery checks.
+4. Seed test-mode plans with `node scripts/seedPlans.js`, including the updated Growth and Business pump and timber pack snapshots. Configure the optional Hinglish Twilio Content SIDs listed in [QA.md](QA.md) for staging delivery checks.
 5. Configure `VITE_API_BASE_URL=https://<backend>/api` for the frontend and send signed Razorpay subscription events to `https://<backend>/api/billing/webhook`.
 6. Run through [QA.md](QA.md).

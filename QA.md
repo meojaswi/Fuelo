@@ -17,11 +17,13 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 - [ ] Six Razorpay test plans created and `RAZORPAY_PLAN_<STARTER|GROWTH|BUSINESS>_<MONTHLY|YEARLY>` set
 - [ ] Razorpay webhook URL points to `https://<backend>/api/billing/webhook`
 - [ ] From `backend/`, run `node scripts/migrateToMemberships.js --dry-run` against staging. Confirm the summary matches the expected legacy workspaces before running it again without `--dry-run`.
-- [ ] From `backend/`, rerun `node scripts/seedPlans.js`. With all six test plan IDs configured, the output shows `seeded: 6` and `skipped: 0`. This refreshes the Growth and Business plans with the pump-pack feature.
+- [ ] From `backend/`, rerun `node scripts/seedPlans.js`. With all six test plan IDs configured, the output shows `seeded: 6` and `skipped: 0`. This refreshes the Growth and Business plan templates with the pump and timber pack features.
 - [ ] Prepare disposable workspaces for the credit-limit, month-cap, expired-trial, and failed-payment checks. Use staging fixtures for a customer credit limit, 79 and 100 non-voided sales in the current IST month, an expired `trialEndsAt`, and `pastDueSince` fixtures inside and beyond the three-day grace period.
+- [ ] Prepare an isolated timber Trial or Business workspace with an owner, manager, and attendant. Use sample GST and supplier data and a test phone for messaging. Trial, Growth and Business can run the CSV checks.
+- [ ] After reseeding plans, open **Purchases** on a timber Starter workspace. The upgrade dialog appears.
 - [ ] Frontend `VITE_API_BASE_URL` points to `https://<backend>/api`
 - [ ] `GET https://<backend>/api/health` returns `{ ok: true }`
-- [ ] Prepare a disposable fuel trial workspace with owner, manager and attendant logins. Use this workspace or a Business workspace for the pump CSV check.
+- [ ] Prepare a disposable fuel trial workspace with owner, manager and attendant logins. Use this workspace or a Growth or Business workspace for the pump CSV check.
 - [ ] For the combined pump run, create the diesel tank described below, set Diesel to ₹100 per litre in **Inventory**, and save ₹250 as the **Shift variance alert threshold** in **Settings → Pump settings**.
 - [ ] GitHub Actions is green on `main`
 - [ ] `npm test` passes locally in both modes (replica set, and `FUELO_TEST_STANDALONE=1`)
@@ -160,7 +162,7 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 - [ ] As attendant, try recording a dip with attendant dips disabled. The action is blocked. Enable attendant dips as owner and confirm the attendant can record one.
 - [ ] Open **Pump Report** for the IST date with the dip. Check that opening, deliveries, sales adjustments and closing reconcile.
 - [ ] Open the combined-run **Pump Report**. With 30 litres of throughput and the default 0.5% threshold, the −2-litre dip variance is highlighted.
-- [ ] In the trial or Business workspace, choose **Download CSV**. The downloaded file opens with the selected IST date's tank and shift rows.
+- [ ] In a trial, Growth or Business workspace, choose **Download CSV**. The downloaded file opens with the selected IST date's tank and shift rows.
 - [ ] In a separate staging run, void an earlier IST date's delivery with stock available. The original date no longer includes it in deliveries. The original posting and later reversal appear under **Other adjustments** on their respective dates.
 
 ### Fleet credit
@@ -171,7 +173,59 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 
 ---
 
-## 5. Cross-cutting checks
+## 5. Phase 3b: Timber pack
+
+### Timber items and dimensions
+
+- [ ] Configure a Teak A item priced at ₹100 per cubic foot. Record 10 cubic feet and 15 pieces as opening stock. Inventory shows both values.
+- [ ] Sell three pieces measuring 8 ft × 6 in × 2 in with a ₹25 transport charge. The quantity is 2 cubic feet and the sale total is ₹225.
+- [ ] Void that sale with a reason. Inventory returns to 10 cubic feet and 15 pieces.
+
+### Purchases and suppliers
+
+- [ ] Add a supplier with a ₹40 opening balance. The supplier ledger shows the opening adjustment and ₹40 payable.
+- [ ] Enter a ₹100 purchase of three pieces totaling 2 cubic feet, with ₹25 paid. Stock increases by 2 cubic feet and three pieces, and the payable becomes ₹115.
+- [ ] Enter a ₹200 supplier payment against that ₹115 balance without marking it as an advance. The app rejects it and the balance stays ₹115.
+- [ ] Void the purchase with a reason while all three pieces remain in stock. Quantity and pieces reverse and the supplier balance becomes ₹15.
+- [ ] Record a ₹25 supplier payment with **Advance** selected. The ledger shows a ₹10 supplier advance.
+
+### Part payments and advances
+
+- [ ] Record ₹4,000 cash on a ₹10,000 sale. The customer ledger shows a ₹4,000 sale payment and ₹6,000 due.
+- [ ] Enable **Customer advances** in the timber workspace settings, then record a ₹7,000 payment. The ledger shows ₹1,000 as **Customer credit**.
+- [ ] Create another sale with ₹2,000 unpaid. The sale applies ₹1,000 customer credit and the ledger shows ₹1,000 still due.
+
+### GST invoices and credit notes
+
+- [ ] As an owner, enter the tax profile with the GSTIN checksum changed. The form rejects it.
+- [ ] Save a valid tax profile and configure a timber item's HSN and GST rate. Record a same-state sale and confirm the preview and invoice show CGST and SGST.
+- [ ] Record a sale with a different place-of-supply state. The preview and invoice show IGST.
+- [ ] Download a tax invoice PDF. Confirm the invoice number, seller, buyer, line taxes, round-off, total in words and payment breakdown.
+- [ ] Open the tax sale's transaction detail as manager. **Manage credit note in invoice** opens the invoice, where **Issue credit note** is available.
+- [ ] Issue a credit note with a reason. The original invoice remains visible, the stock returns, and the customer ledger records the reversal.
+- [ ] With a single invoice and its full credit note on the same IST day, run **GST summary** for that day. The item's taxable value and tax net to zero and the accountant-facing note is visible.
+
+### Timber reports and messages
+
+- [ ] Open **Timber Reports → Stock** after receiving a purchase. Confirm species, grade, price, billed quantity and pieces.
+- [ ] View **Sales by species** after selling two grades. Check that their sales are grouped under the species and pricing unit.
+- [ ] Open **Receivables aging** with a part-paid customer invoice. The unpaid amount appears in the band for the sale date.
+- [ ] Enter a supplier invoice dated 45 days ago and open **Payables aging**. Its unpaid amount appears in **31–60 days**.
+- [ ] Open **Profit estimate** for a sale with a recorded purchase cost. Check that the estimate uses the weighted-average purchase rate.
+- [ ] In a Trial, Growth or Business workspace, download a CSV for each report. On a Starter workspace, confirm the CSV button shows the upgrade dialog. The downloaded headers and rows match the page.
+- [ ] Record a timber sale with a test phone. The receipt lists pieces and dimensions in the workspace language.
+- [ ] Record a purchase for a supplier with a test phone. The message identifies the supplier invoice.
+
+### Navigation and permissions
+
+- [ ] On a phone, open the Timber workspace and reach **Purchases**, **Suppliers**, **Invoices**, and **Timber Reports** from the operations navigation.
+- [ ] Sign in as an attendant, open **New transaction**, and select a timber grade. The dimension inputs are available.
+- [ ] As that attendant, try opening the Purchases and Suppliers pages directly. Access is denied.
+- [ ] As that attendant, open a tax sale the attendant recorded. The credit-note action is unavailable.
+- [ ] Switch to a fuel workspace. Timber entries disappear from the operations navigation.
+- [ ] Open **New transaction** in that fuel workspace. The single-item sale form appears.
+
+## 6. Cross-cutting checks
 
 - [ ] Cross-tenant: create two workspaces with different owners; confirm owner B can never see A's customers, sales, stock or reports (try pasting A's IDs into B's URLs)
 - [ ] On the pump staff phone, open a shift, record a sale and open the close form. The nozzle readings, payment inputs and submit controls are usable at the phone width.
@@ -181,6 +235,61 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 - [ ] Force a receipt delivery to fail on staging. It appears as **Failed** in **Messages**, and using **Retry** queues it again.
 - [ ] End-of-day summary arrives at ~23:55 IST with correct units and totals
 - [ ] On a single staging backend instance, restart with a receipt still pending. **Messages** shows the delivery attempt after the worker resumes.
+
+## 7. Screen checklist pass (added 2026-11-23)
+
+Run each check at 360px (phone), 768px and 1280px in the real browser with real data. "No sideways scroll" means the page itself does not scroll horizontally. A table that scrolls inside its own box is a known open item (see CHECKS.md). Touch targets should be at least 44px tall.
+
+### Shared behaviour
+
+- [ ] Every button that sends a request (save, confirm, retry, download, void, switch) shows a spinner and ignores a second tap while the request is in flight. Throttle the network to check.
+- [ ] Every dialog's **×** close button has a 44px target and is announced as "Close" by a screen reader. Toasts announce themselves and the dismiss button is announced as "Dismiss".
+
+### Public pages
+
+- [ ] **Login:** the phone field opens the phone keypad. "Forgot password?" and the header and footer links are easy to tap. The faint dot texture still shows on the right panel.
+- [ ] **Signup:** the phone field opens the phone keypad. The business-type pills are at least 44px tall. The faint dot texture still shows.
+- [ ] **Pricing:** prices show as `₹499`, `₹4,990` and so on, with no decimals. The Monthly/Yearly toggle and the plan buttons are easy to tap. While checkout starts, the signed-in button reads "Starting checkout…" and cannot be tapped twice.
+
+### Dashboard and transactions
+
+- [ ] **Dashboard:** a long customer name in Recent transactions does not widen the page at 360px. The inventory box says "No stock movement recorded today." on a quiet day. If the summary request fails, a red message appears above the cards. "View inventory" and "View all" are easy to tap.
+- [ ] **New transaction:** the quantity and amount fields open the decimal keypad. The "Auto: ₹…" hint under Amount uses Indian grouping. "Use list price", "Preview message" and the customer suggestions are easy to tap.
+- [ ] **Transactions:** if the list request fails, a red message shows instead of "No transactions found". "New" is 44px tall on desktop.
+- [ ] **Transaction detail:** "Download PDF receipt" shows a spinner and cannot be tapped twice. The quantity shows its unit. "Open invoice", "View customer ledger" and "Manage credit note in invoice" are easy to tap.
+
+### Credit, stock and reports
+
+- [ ] **Credit:** a long customer name wraps and does not push the balance off screen at 360px. In **Record payment** the amount field opens the decimal keypad, and the payment-mode select is 44px tall. "Back to Credit / Udhaar" and "View transaction" are easy to tap.
+- [ ] **Inventory (fuel):** stock shows with Indian grouping and its unit. Price shows as `₹106.31`. The edit, save, cancel and delete icons are 44px and announced with the item name. Tapping Delete twice quickly asks only once and removes only that item. "Add to Inventory" shows a spinner while saving. Clicking a form label focuses its field.
+- [ ] **Reports:** an empty range shows "No sales in this date range." The Group by select is 44px tall.
+- [ ] **Messages:** if the request fails, a red message shows. Retry shows a spinner on the row being retried, and the date uses Indian formatting.
+- [ ] **Activity log:** a very long action code or summary wraps and does not widen the page at 360px.
+
+### Team, settings and billing
+
+- [ ] **Members:** the Role select is 44px tall in the list and in the invite dialog. The invite phone field opens the phone keypad.
+- [ ] **Settings:** the save, add and change-password buttons show a spinner while sending. The remove-item trash icon is 44px and announced with the item name. Clicking each form label focuses its field. The dips checkbox row is easy to tap.
+- [ ] **Billing:** usage reads like "1,234 / 1,500 transactions" and "3 / 5 members". "View plans" is 44px tall.
+- [ ] **Workspaces:** at 360px the row wraps and the Switch and delete buttons stay on screen. The trash icon is 44px and announced with the workspace name. "Create Workspace" shows a spinner. Clicking a form label focuses its field.
+
+### Pump pages
+
+- [ ] **Pump shifts:** the meter, test-litre and declared-payment fields open the decimal keypad. Declared Cash, UPI and Card labels show (₹). Every variance pill says "Matches" or "Needs review" as well as using color.
+- [ ] **Pump tanks and deliveries:** the quantity, capacity, meter and rate fields open the decimal keypad. The rate label shows (₹). The tank select and the over-capacity checkbox row are 44px tall.
+- [ ] **Pump report:** the shift table shows hours with "h" and litres with "L". A shift with a variance also says "Needs review" in its variance cell.
+
+### Timber pages
+
+- [ ] **Timber inventory:** while loading it says "Loading timber stock…". An empty yard says to add the first item. Stock shows up to 3 decimals with its unit, and price reads "per Cubic feet" (or the item's unit) instead of "per unit". The price, thickness, quantity and GST fields open the decimal keypad and pieces opens the number keypad.
+- [ ] **Suppliers:** "Outstanding payables" shows a spinner while loading. The header buttons wrap at 360px. The phone field opens the phone keypad and the payment amount opens the decimal keypad.
+- [ ] **Purchases:** while loading it says "Loading purchases…". Line quantities show with up to 3 decimals. Each purchase row is easy to tap open.
+- [ ] **Invoices:** while loading it says "Loading invoices…". The invoice and credit-note PDF buttons show a spinner and cannot be tapped twice. "Back to invoices" is easy to tap.
+- [ ] **Timber reports:** the GST summary shows ₹ amounts for taxable value, CGST, SGST and IGST. "Download CSV" shows a spinner and cannot be tapped twice.
+
+### Navigation
+
+- [ ] **App shell, top bar and bottom nav:** the back arrow and the bell are 44px and announced as "Go back" and "Notifications". The workspace switcher announces whether it is expanded. Sidebar links, "Sign out" and the mobile operations strip are at least 44px tall. The page loading text is announced.
 
 ---
 

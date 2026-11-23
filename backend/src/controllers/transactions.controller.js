@@ -18,6 +18,7 @@ const { recordCreditSale, reverseCreditSale } = require("../services/ledger.serv
 const messageQueue = require("../services/messageQueue.service");
 const messageBuilder = require("../services/messageBuilder.service");
 const pdfService = require("../services/pdf.service");
+const { createTimberSale, reverseTimberSale } = require("../services/timberSales.service");
 
 async function create(req, res) {
   const { workspaceId } = req;
@@ -26,6 +27,17 @@ async function create(req, res) {
     const dealer = await lockWorkspace(workspaceId, context);
     const options = { workspace: dealer, session: context.session };
     const usage = await assertCan(workspaceId, "transaction:create", options);
+    if (sale.lineItems) {
+      const tx = await createTimberSale(
+        req,
+        dealer,
+        sale,
+        override && req.user.role !== "attendant",
+        context
+      );
+      return { tx, usage };
+    }
+    if (dealer.verticalType === "timber") fail(400, "Add timber dimension lines to this sale");
     if (sale.paymentMode === "credit")
       await assertCan(workspaceId, "feature:creditLedger", options);
     const features = getVertical(dealer.verticalType).flags;
@@ -152,6 +164,12 @@ async function voidSale(req, res) {
     ) {
       fail(409, "Reopen the shift before voiding one of its sales");
     }
+    if (tx.lineItems?.length) {
+      if (tx.invoice?.type === "tax_invoice")
+        fail(409, "Issue a credit note to reverse this tax invoice", "CREDIT_NOTE_REQUIRED");
+      await reverseTimberSale(tx, req.user.userId, context);
+      return tx;
+    }
     if (tx.inventoryId) {
       await changeStock(
         {
@@ -235,6 +253,7 @@ async function getReceiptPdf(req, res) {
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="receipt-${tx._id}.pdf"`);
+  if (tx.invoice?.type === "tax_invoice") return pdfService.streamTaxInvoice(res, tx);
   pdfService.streamTransactionReceipt(res, {
     businessName: dealer.businessName,
     tx,

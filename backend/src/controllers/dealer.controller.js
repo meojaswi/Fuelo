@@ -45,6 +45,17 @@ async function updateDealer(req, res) {
     updates["config.attendantsCanDip"] = req.body.attendantsCanDip;
   }
 
+  if (req.body.allowAdvances !== undefined) {
+    if (typeof req.body.allowAdvances !== "boolean")
+      return res.status(400).json({ error: "allowAdvances must be a boolean" });
+    const workspace = await Workspace.findOne({ workspaceId: req.workspaceId });
+    if (workspace?.verticalType !== "timber")
+      return res
+        .status(400)
+        .json({ error: "Customer advances are available in timber workspaces" });
+    updates["config.allowAdvances"] = req.body.allowAdvances;
+  }
+
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: "No fields to update" });
   }

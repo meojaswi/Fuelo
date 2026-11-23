@@ -6,6 +6,7 @@ import MotionWord from "../components/shared/MotionWord";
 import HighlightPill from "../components/shared/HighlightPill";
 import LoginFooter from "../components/shared/LoginFooter";
 import LoginHeader from "../components/shared/LoginHeader";
+import { formatCurrency } from "../utils/formatters";
 
 const PLANS = [
   {
@@ -33,6 +34,7 @@ const PLANS = [
       "Sales reports",
       "PDF receipts",
       "Credit customer tracking",
+      "CSV exports",
       "SMS fallback on failure",
     ],
     highlighted: true,
@@ -46,7 +48,6 @@ const PLANS = [
     features: [
       "Everything in Growth",
       "15 logins, up to 5 workspaces",
-      "CSV exports",
       "Multiple item verticals",
       "Priority support",
       "Custom message templates",
@@ -54,9 +55,6 @@ const PLANS = [
   },
 ];
 
-function formatINR(n) {
-  return n.toLocaleString("en-IN");
-}
 
 export default function PricingPage() {
   const { user, token } = useAuth();
@@ -116,16 +114,20 @@ export default function PricingPage() {
           {/* Billing cycle toggle */}
           <div className="mx-auto mt-10 flex w-fit animate-fade-up items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 [animation-delay:300ms]">
             <button
+              type="button"
+              aria-pressed={cycle === "monthly"}
               onClick={() => setCycle("monthly")}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+              className={`min-h-11 rounded-full px-4 py-1.5 text-sm transition-colors ${
                 cycle === "monthly" ? "bg-white text-fuelo-ink" : "text-white/60 hover:text-white"
               }`}
             >
               Monthly
             </button>
             <button
+              type="button"
+              aria-pressed={cycle === "yearly"}
               onClick={() => setCycle("yearly")}
-              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors ${
+              className={`flex min-h-11 items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors ${
                 cycle === "yearly" ? "bg-white text-fuelo-ink" : "text-white/60 hover:text-white"
               }`}
             >
@@ -160,7 +162,7 @@ export default function PricingPage() {
                     <p className="mono-label text-slate-400">{plan.tagline}</p>
                     <h3 className="mt-1 text-xl font-bold">{plan.name}</h3>
                     <div className="mt-4 flex items-baseline gap-1">
-                      <span className="font-mono text-3xl font-bold">₹{formatINR(price)}</span>
+                      <span className="font-mono text-3xl font-bold">{formatCurrency(price, { whole: true })}</span>
                       <span className="text-sm text-slate-400">{period}</span>
                     </div>
                     <p className="mt-1 font-mono text-xs text-slate-400">{plan.cap}</p>
@@ -181,14 +183,15 @@ export default function PricingPage() {
                         type="button"
                         disabled={busy || !user?.permissions?.includes("billing:manage")}
                         onClick={() => startCheckout(plan.name)}
-                        className="mt-6 w-full border border-fuelo-coral/40 px-2.5 py-1.5 text-sm font-medium text-fuelo-ink hover:bg-fuelo-coral/10 disabled:opacity-50"
+                        aria-busy={busy || undefined}
+                        className="mt-6 min-h-11 w-full border border-fuelo-coral/40 px-2.5 py-1.5 text-sm font-medium text-fuelo-ink hover:bg-fuelo-coral/10 disabled:opacity-50"
                       >
-                        Choose {plan.name}
+                        {busy ? "Starting checkout…" : `Choose ${plan.name}`}
                       </button>
                     ) : (
                       <Link
                         to="/signup"
-                        className="mt-6 block w-full border border-fuelo-coral/40 px-2.5 py-1.5 text-center text-sm font-medium text-fuelo-ink"
+                        className="mt-6 flex min-h-11 w-full items-center justify-center border border-fuelo-coral/40 px-2.5 py-1.5 text-center text-sm font-medium text-fuelo-ink"
                       >
                         Get started
                       </Link>

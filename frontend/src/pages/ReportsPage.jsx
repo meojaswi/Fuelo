@@ -69,7 +69,7 @@ export default function ReportsPage() {
         <label className="block space-y-1.5">
           <span className="text-xs font-semibold text-slate-600">Group by</span>
           <select
-            className="control px-3 py-2"
+            className="control min-h-11 px-3 py-2"
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value)}
           >
@@ -92,6 +92,9 @@ export default function ReportsPage() {
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
+      )}
+      {report && !report.groups.length && (
+        <p className="text-sm text-slate-500">No sales in this date range.</p>
       )}
       {report && (
         <div className="panel overflow-auto">

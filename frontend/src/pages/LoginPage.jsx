@@ -106,9 +106,8 @@ export default function LoginPage() {
               {/* Faint dot texture */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-[0.035]"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(theme(colors.slate.900)_1px,transparent_1px)] opacity-[0.035]"
                 style={{
-                  backgroundImage: "radial-gradient(#0f172a 1px, transparent 1px)",
                   backgroundSize: "18px 18px",
                 }}
               />
@@ -176,7 +175,7 @@ export default function LoginPage() {
                 </Button>
                 <button
                   type="button"
-                  className="text-sm font-semibold text-fuelo-coral"
+                  className="min-h-11 text-sm font-semibold text-fuelo-coral"
                   onClick={() => setShowRecovery(true)}
                 >
                   Forgot password?

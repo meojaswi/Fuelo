@@ -6,6 +6,7 @@ export function useDailySummary() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -15,10 +16,16 @@ export function useDailySummary() {
 
     getDailySummary()
       .then((data) => {
-        if (active) setSummary(data);
+        if (active) {
+          setSummary(data);
+          setError(false);
+        }
       })
       .catch(() => {
-        if (active) setSummary(null);
+        if (active) {
+          setSummary(null);
+          setError(true);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -29,5 +36,5 @@ export function useDailySummary() {
     };
   }, [user?.workspaceId]);
 
-  return { summary, loading };
+  return { summary, loading, error };
 }

@@ -4,19 +4,19 @@ export default function LoginFooter() {
       <p>© 2026 fuelo. All rights reserved.</p>
 
       <nav aria-label="Footer" className="flex items-center gap-4 sm:gap-5">
-        <a href="#" className="transition hover:text-fuelo-coral">
+        <a href="#" className="inline-flex min-h-11 items-center transition hover:text-fuelo-coral">
           Privacy
         </a>
         <span aria-hidden="true" className="text-white/15">
           ·
         </span>
-        <a href="#" className="transition hover:text-fuelo-coral">
+        <a href="#" className="inline-flex min-h-11 items-center transition hover:text-fuelo-coral">
           Terms
         </a>
         <span aria-hidden="true" className="text-white/15">
           ·
         </span>
-        <a href="#" className="transition hover:text-fuelo-coral">
+        <a href="#" className="inline-flex min-h-11 items-center transition hover:text-fuelo-coral">
           Status
         </a>
       </nav>

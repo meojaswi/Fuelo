@@ -24,6 +24,7 @@ export default function TransactionDetailPage() {
   const [reason, setReason] = useState("");
   const [voidError, setVoidError] = useState("");
   const [voiding, setVoiding] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const status = voided?._id === id ? voided : t;
   if (loading)
     return <div className="py-16 text-center text-sm text-slate-400">Loading transaction…</div>;
@@ -43,6 +44,8 @@ export default function TransactionDetailPage() {
     }
   }
   async function downloadReceipt() {
+    if (downloading) return;
+    setDownloading(true);
     setPdfError("");
     try {
       const url = URL.createObjectURL(await getReceiptPdf(id));
@@ -53,6 +56,8 @@ export default function TransactionDetailPage() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       setPdfError("Could not download the receipt.");
+    } finally {
+      setDownloading(false);
     }
   }
   async function retry() {
@@ -77,6 +82,32 @@ export default function TransactionDetailPage() {
         </p>
       )}
       <TransactionInfoCard transaction={t} />
+      {t.invoiceNumber && (
+        <div className="panel space-y-2 p-4 text-sm">
+          <p className="font-semibold">Invoice {t.invoiceNumber}</p>
+          {t.lineItems?.map((line, index) => (
+            <p key={index}>
+              {line.itemType} · {line.quantity} {line.unit} · {line.pieces} pieces ·{" "}
+              {formatCurrency(line.lineAmount)}
+            </p>
+          ))}
+          <p>
+            Paid at sale {formatCurrency(t.paidAmount)} · Initial credit{" "}
+            {formatCurrency(t.creditAmount)}
+          </p>
+          {t.advanceApplied > 0 && (
+            <p>Customer credit applied {formatCurrency(t.advanceApplied)}</p>
+          )}
+          {can("invoices:read") && (
+            <Link
+              to={"/timber/invoices/" + id}
+              className="inline-flex min-h-11 items-center font-semibold text-fuelo-coral"
+            >
+              Open invoice
+            </Link>
+          )}
+        </div>
+      )}
       {t.vehicleNumber && (
         <p className="text-sm text-slate-500">
           Vehicle {t.vehicleNumber}
@@ -90,7 +121,10 @@ export default function TransactionDetailPage() {
         </p>
       )}
       {t.customerId && can("credit:read") && (
-        <Link className="text-sm font-semibold text-fuelo-coral" to={`/credit/${t.customerId}`}>
+        <Link
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-fuelo-coral"
+          to={`/credit/${t.customerId}`}
+        >
           View customer ledger
         </Link>
       )}
@@ -110,16 +144,34 @@ export default function TransactionDetailPage() {
           </div>
         </div>
       )}
-      <button type="button" onClick={downloadReceipt} className="font-semibold text-fuelo-coral">
+      <Button
+        type="button"
+        variant="secondary"
+        loading={downloading}
+        onClick={downloadReceipt}
+        className="text-fuelo-coral"
+      >
         Download PDF receipt
-      </button>
+      </Button>
       {pdfError && <p role="alert">{pdfError}</p>}
       <ShareLinkSection transactionId={id} />
-      {status.status === "active" && can("transactions:void") && (
-        <Button type="button" variant="secondary" onClick={() => setShowVoid(true)}>
-          Void transaction
-        </Button>
-      )}
+      {status.status === "active" &&
+        t.invoice?.type === "tax_invoice" &&
+        can("invoices:credit_note") && (
+          <Link
+            to={"/timber/invoices/" + id}
+            className="flex min-h-11 items-center text-sm font-semibold text-fuelo-coral"
+          >
+            Manage credit note in invoice
+          </Link>
+        )}
+      {status.status === "active" &&
+        t.invoice?.type !== "tax_invoice" &&
+        can("transactions:void") && (
+          <Button type="button" variant="secondary" onClick={() => setShowVoid(true)}>
+            Void transaction
+          </Button>
+        )}
       <Modal
         open={showVoid}
         onClose={() => !voiding && setShowVoid(false)}

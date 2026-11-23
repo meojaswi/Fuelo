@@ -83,7 +83,7 @@ async function createSubscription(req, res) {
   );
   if (!workspace) fail(409, "A billing change is already in progress");
   const reservation = { workspaceId, checkoutAttempt: attempt };
-  try {
+  async function prepareCheckout() {
     const active = await currentLink(workspace);
     if (active && ["active", "halted"].includes(active.status)) {
       if (active.status !== "active" || workspace.cancelAtCycleEnd)
@@ -107,7 +107,7 @@ async function createSubscription(req, res) {
         { workspaceId, _id: active._id },
         { $set: { pendingPlanId: plan._id } }
       );
-      return res.json({ scheduled: true, message: "Plan change scheduled for the next cycle." });
+      return { body: { scheduled: true, message: "Plan change scheduled for the next cycle." } };
     }
     if (workspace.pendingSubscriptionId) {
       const pending = await WorkspaceSubscription.findOne({
@@ -116,7 +116,7 @@ async function createSubscription(req, res) {
         status: "created",
       });
       if (pending && String(pending.planId) === String(plan._id)) {
-        return res.json({ checkout: checkout(pending.razorpaySubscriptionId) });
+        return { body: { checkout: checkout(pending.razorpaySubscriptionId) } };
       }
       if (pending) fail(409, "Cancel the pending checkout before choosing a different plan");
     }
@@ -140,16 +140,24 @@ async function createSubscription(req, res) {
       await providerCall(() => provider.cancelSubscription(remote.id, false));
       fail(409, "The checkout window ended. Try again.");
     }
-    res.status(201).json({
-      subscription: link,
-      razorpaySubscription: { id: remote.id },
-      checkout: checkout(remote.id),
-    });
+    return {
+      status: 201,
+      body: {
+        subscription: link,
+        razorpaySubscription: { id: remote.id },
+        checkout: checkout(remote.id),
+      },
+    };
+  }
+  let result;
+  try {
+    result = await prepareCheckout();
   } finally {
     await Workspace.updateOne(reservation, {
       $unset: { checkoutAttempt: 1, checkoutStartedAt: 1 },
     });
   }
+  res.status(result.status ?? 200).json(result.body);
 }
 
 async function cancel(req, res) {

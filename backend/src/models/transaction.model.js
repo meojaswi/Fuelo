@@ -14,6 +14,14 @@ const transactionSchema = new mongoose.Schema(
     quantity: { type: Number, required: true },
     unit: { type: String, required: true }, // litres, cubic ft, bags, etc.
     amount: { type: Number, required: true },
+    lineItems: { type: [mongoose.Schema.Types.Mixed], default: undefined },
+    charges: { type: [mongoose.Schema.Types.Mixed], default: undefined },
+    paidAmount: Number,
+    creditAmount: Number,
+    advanceApplied: Number,
+    invoiceNumber: String,
+    invoice: mongoose.Schema.Types.Mixed,
+    creditNoteId: { type: mongoose.Schema.Types.ObjectId, ref: "CreditNote" },
     expectedAmount: Number,
     priceMismatch: Boolean,
 
@@ -45,6 +53,14 @@ transactionSchema.index({ workspaceId: 1, customerPhone: 1 });
 transactionSchema.index({ workspaceId: 1, paymentMode: 1, createdAt: -1 });
 
 transactionSchema.index({ workspaceId: 1, shiftId: 1, status: 1 });
+transactionSchema.index(
+  { workspaceId: 1, invoiceNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { invoiceNumber: { $exists: true } },
+  }
+);
+transactionSchema.index({ workspaceId: 1, "invoice.issuedAt": 1 });
 transactionSchema.plugin(requireWorkspaceScope);
 
 module.exports = mongoose.model("Transaction", transactionSchema);

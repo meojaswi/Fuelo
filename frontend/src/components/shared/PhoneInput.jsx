@@ -7,6 +7,7 @@ export default function PhoneInput(p) {
           +91
         </span>
         <input
+          inputMode="tel"
           {...p}
           className="min-w-0 flex-1 bg-white px-3.5 py-3 text-sm outline-none"
           maxLength={10}
