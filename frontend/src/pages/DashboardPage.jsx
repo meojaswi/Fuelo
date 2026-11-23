@@ -8,6 +8,7 @@ import ItemStatRow from "../components/dashboard/ItemStatRow";
 import NotificationBanner from "../components/dashboard/NotificationBanner";
 import RecentTransactionList from "../components/dashboard/RecentTransactionList";
 import GetStartedCard from "../components/onboarding/GetStartedCard";
+import TankStrip from "../components/pump/TankStrip";
 import SkeletonCard from "../components/shared/SkeletonCard";
 function greeting(name) {
   const hour = new Date().getHours();
@@ -53,6 +54,7 @@ export default function DashboardPage() {
         </p>
       )}
       <DailySummaryCard summary={summary} />
+      <TankStrip />
       {user?.permissions?.includes("notifications:manage") && (
         <NotificationBanner
           sent={summary?.notifications?.sent || 0}

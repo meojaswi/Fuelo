@@ -8,15 +8,13 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 
 ## 0. Staging setup (do this first)
 
-- [ ] MongoDB Atlas cluster created (replica set, which Atlas gives by default). Database user + IP access list set.
-- [ ] Set `MONGO_URI`, `JWT_SECRET` (32+ characters), `CORS_ORIGINS` and `PUBLIC_APP_URL` to the staging values. Set `TRUST_PROXY_HOPS=1` if staging has exactly one trusted proxy.
+- [ ] Set `DATABASE_URL`, `JWT_SECRET` (32+ characters), `CORS_ORIGINS` and `PUBLIC_APP_URL` to the staging values. Set `TRUST_PROXY_HOPS=1` if staging has exactly one trusted proxy.
 - [ ] Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_WHATSAPP_FROM`. For business-initiated invites and resets, set `TWILIO_WHATSAPP_INVITE_CONTENT_SID` and `TWILIO_WHATSAPP_OTP_CONTENT_SID` to approved templates. For sandbox tests, join the sender with the test phone.
 - [ ] For Hinglish OTP and invite delivery, configure `TWILIO_WHATSAPP_OTP_CONTENT_SID_HI` and `TWILIO_WHATSAPP_INVITE_CONTENT_SID_HI` with approved templates. Without them, the standard configured SIDs are used.
 - [ ] For WhatsApp delivery outside the 24-hour conversation window, configure approved `TWILIO_WHATSAPP_DUES_REMINDER_CONTENT_SID` and `TWILIO_WHATSAPP_SHIFT_VARIANCE_CONTENT_SID` templates. Set the matching `_HI` variables for approved Hinglish versions. Use placeholders 1 (business), 2 (customer), 3 (amount) for dues, and 1 (business), 2 (signed amount) for alerts.
 - [ ] Razorpay **test-mode** keys set (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`)
 - [ ] Six Razorpay test plans created and `RAZORPAY_PLAN_<STARTER|GROWTH|BUSINESS>_<MONTHLY|YEARLY>` set
 - [ ] Razorpay webhook URL points to `https://<backend>/api/billing/webhook`
-- [ ] From `backend/`, run `node scripts/migrateToMemberships.js --dry-run` against staging. Confirm the summary matches the expected legacy workspaces before running it again without `--dry-run`.
 - [ ] From `backend/`, rerun `node scripts/seedPlans.js`. With all six test plan IDs configured, the output shows `seeded: 6` and `skipped: 0`. This refreshes the Growth and Business plan templates with the pump and timber pack features.
 - [ ] Prepare disposable workspaces for the credit-limit, month-cap, expired-trial, and failed-payment checks. Use staging fixtures for a customer credit limit, 79 and 100 non-voided sales in the current IST month, an expired `trialEndsAt`, and `pastDueSince` fixtures inside and beyond the three-day grace period.
 - [ ] Prepare an isolated timber Trial or Business workspace with an owner, manager, and attendant. Use sample GST and supplier data and a test phone for messaging. Trial, Growth and Business can run the CSV checks.
@@ -26,7 +24,7 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 - [ ] Prepare a disposable fuel trial workspace with owner, manager and attendant logins. Use this workspace or a Growth or Business workspace for the pump CSV check.
 - [ ] For the combined pump run, create the diesel tank described below, set Diesel to ₹100 per litre in **Inventory**, and save ₹250 as the **Shift variance alert threshold** in **Settings → Pump settings**.
 - [ ] GitHub Actions is green on `main`
-- [ ] `npm test` passes locally in both modes (replica set, and `FUELO_TEST_STANDALONE=1`)
+- [ ] `npm test` passes locally
 
 ---
 
@@ -122,7 +120,7 @@ Legend: `[ ]` not tested · `[x]` passed · `[!]` failed (add a note below the i
 ## 4. Phase 3a: Pump pack
 
 ### Tests cleanup
-- [ ] From `backend/`, run `npm test` with a replica set and with `FUELO_TEST_STANDALONE=1`. All tests pass in both modes.
+- [ ] From `backend/`, run `npm test`. All tests pass.
 - [ ] Run `npm run test:coverage` from `backend/`. The report includes lines, branches, and functions.
 
 ### Setup
@@ -312,6 +310,17 @@ Run each check at 360px (phone), 768px and 1280px in the real browser with real 
 - [ ] **Hide checklist:** the button removes the card and it stays hidden after a reload. Another workspace of the same user still shows its own card.
 - [ ] **Finished workspace:** once every required step is done (the team invite is optional), the card disappears by itself.
 - [ ] **Phone:** at 360px the card does not scroll sideways and the Open and Hide buttons are at least 44px tall.
+
+### Tank gauges (added 2026-11-24)
+
+- [ ] **Tanks page, colors by fuel:** with a Petrol, a Diesel and a CNG tank, each tank gauge has its own color (Petrol blue, Diesel purple, CNG teal) and the fuel name is written next to a colored dot. Any other fuel gets a stable color of its own.
+- [ ] **Fill level matches the numbers:** a tank holding 62% of its capacity fills about 62% of the gauge, and the card says "62% · 12,345 L of 20,000 L". The dashed line on the gauge sits at 20%.
+- [ ] **Low, empty and over capacity:** a tank at or under 20% shows an amber **Low** badge with a warning icon. A tank at 0 shows **Empty**. A tank above its capacity shows **Over capacity**. The fill color does not change; the badge is the signal.
+- [ ] **Last dip on the card:** after recording a dip, reload the Tanks page. The card says "Last dip … L on <date> · variance … L". A tank with no dip says "No dip recorded yet."
+- [ ] **Record delivery from a tank card:** the button opens the delivery dialog with that tank already selected. The top "Record delivery" button still opens it with the first tank selected.
+- [ ] **Attendant view:** an attendant who can only record dips sees no gauge, no book stock and no delivery button on the Tanks page, as before.
+- [ ] **Dashboard tank levels:** a fuel workspace with tanks shows a "Stock in your tanks" row with one small gauge per tank, linking to the Tanks page. It is hidden for timber workspaces, for users who cannot manage tanks, and when there are no tanks. At 360px it does not scroll sideways.
+- [ ] **Reduced motion:** with "reduce motion" turned on in the operating system, the gauge fill does not animate.
 
 ---
 

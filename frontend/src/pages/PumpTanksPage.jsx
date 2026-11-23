@@ -6,6 +6,8 @@ import Input from "../components/shared/Input";
 import Modal from "../components/shared/Modal";
 import Pagination from "../components/shared/Pagination";
 import { formatCurrency, formatDate, formatQuantity } from "../utils/formatters";
+import { FuelLabel, LevelBadge, TankGraphic } from "../components/pump/TankGauge";
+import { levelText } from "../components/pump/tankColors";
 
 const dateOptions = { dateStyle: "medium", timeZone: "Asia/Kolkata" };
 const labels = {
@@ -39,6 +41,12 @@ const fields = {
   void: [["reason", "Reason"]],
 };
 
+function dipSummary(dip) {
+  if (dip === undefined) return "Checking the last dip…";
+  if (dip === null) return "No dip recorded yet.";
+  return `Last dip ${formatQuantity(dip.readingLitres)} L on ${formatDate(dip.recordedAt, dateOptions)} · variance ${formatQuantity(dip.varianceLitres)} L`;
+}
+
 export default function PumpTanksPage() {
   const { user } = useAuth();
   const manage = user?.permissions?.includes("tanks:manage");
@@ -50,6 +58,7 @@ export default function PumpTanksPage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [dips, setDips] = useState(null);
+  const [lastDips, setLastDips] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -70,6 +79,23 @@ export default function PumpTanksPage() {
       active = false;
     };
   }, [manage, page, revision]);
+
+  useEffect(() => {
+    if (!manage || !data) return undefined;
+    let active = true;
+    const tanks = data.tanks.filter((tank) => tank.isActive !== false);
+    Promise.allSettled(tanks.map((tank) => getPump(`/tanks/${tank._id}/dips`))).then((outcomes) => {
+      if (!active) return;
+      const next = {};
+      outcomes.forEach((outcome, index) => {
+        if (outcome.status === "fulfilled") next[tanks[index]._id] = outcome.value.dips[0] ?? null;
+      });
+      setLastDips(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [manage, data]);
 
   function edit(type, id) {
     setError("");
@@ -157,38 +183,43 @@ export default function PumpTanksPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.tanks.map((tank) => (
             <article key={tank._id} className="panel space-y-3 p-4">
-              <p className="mono-label">
-                {tank.itemType}
-                {tank.isActive === false && " · Inactive"}
-              </p>
-              <h3 className="font-bold">{tank.name}</h3>
-              {manage && (
-                <>
-                  <p className="text-sm">
-                    Book stock{" "}
-                    <strong>
-                      {formatQuantity(tank.bookStock)} / {formatQuantity(tank.capacityLitres)} L
-                    </strong>
-                  </p>
-                  <progress
-                    aria-label={`${tank.name} fill level`}
-                    className="w-full accent-fuelo-coral"
-                    max={tank.capacityLitres}
-                    value={Math.max(0, Math.min(tank.capacityLitres, tank.bookStock))}
-                  />
-                  {data.nozzles
-                    .filter((row) => row.tankId === tank._id)
-                    .map((row) => (
-                      <p key={row._id} className="text-xs text-slate-500">
-                        {row.label} · Meter {formatQuantity(row.lastMeterReading)} L
+              <div className="flex items-start gap-4">
+                {manage && <TankGraphic tank={tank} />}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <FuelLabel itemType={tank.itemType} />
+                    {tank.isActive === false && (
+                      <span className="text-xs font-semibold text-slate-600">Inactive</span>
+                    )}
+                    {manage && <LevelBadge tank={tank} />}
+                  </div>
+                  <h3 className="break-words font-bold">{tank.name}</h3>
+                  {manage && (
+                    <>
+                      <p className="text-sm">
+                        Book stock <strong>{levelText(tank)}</strong>
                       </p>
-                    ))}
-                </>
-              )}
+                      <p className="text-xs text-slate-600">{dipSummary(lastDips[tank._id])}</p>
+                      {data.nozzles
+                        .filter((row) => row.tankId === tank._id)
+                        .map((row) => (
+                          <p key={row._id} className="text-xs text-slate-500">
+                            {row.label} · Meter {formatQuantity(row.lastMeterReading)} L
+                          </p>
+                        ))}
+                    </>
+                  )}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {tank.isActive !== false && (
                   <Button variant="secondary" onClick={() => edit("dip", tank._id)}>
                     Record dip
+                  </Button>
+                )}
+                {manage && tank.isActive !== false && (
+                  <Button variant="secondary" onClick={() => edit("delivery", tank._id)}>
+                    Record delivery
                   </Button>
                 )}
                 <Button variant="ghost" onClick={() => viewDips(tank)}>
@@ -240,6 +271,7 @@ export default function PumpTanksPage() {
           <TankForm
             type={dialog.type}
             tanks={activeTanks}
+            initialTank={["delivery", "nozzle"].includes(dialog.type) ? dialog.id : undefined}
             submit={save}
             busy={busy}
             error={error}

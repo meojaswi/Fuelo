@@ -95,6 +95,11 @@ Found during the DESIGN.md section 13 pass over every page and layout. Each one 
 - [ ] **Inventory page: if the list fails to load, it shows the error and also "No inventory items yet".**
 - [ ] **Not every sending button uses the shared `loading` prop.** The inventory row save icon, the Workspaces "Switch" buttons (one shared flag) and the signed-in Pricing plan buttons disable themselves and block a second tap, but show no spinner. Spinners need a per-row or per-plan flag and, for Pricing, a restyle of the button.
 
+**Tank gauges (2026-11-24)**
+
+- [ ] **The 20% low-level line is fixed.** There is no per-tank low-stock setting; adding one needs a backend field. Revisit after the Postgres move.
+- [ ] **The Tanks page makes one extra request per tank** (`GET /tanks/:id/dips`) to show the last dip. Fine for a handful of tanks; a `latestDip` field on `GET /tanks` would remove them.
+
 **Design system (DESIGN section 12, not touched)**
 - [ ] **Raw hex in `index.css`** (`#191c21`, `#111827`, `#cc8066`), leftover Vite CSS in `App.css`, and `rounded-lg` and `rounded-[6px]` on a few pages. The dot-texture hex in Login and Signup was replaced with a Tailwind token.
 - [ ] **Status colors are still ad hoc Tailwind classes**, with no shared `Badge`, `Alert`, `Table` or `Card`. Status always has text or an icon next to the color on the screens checked.
