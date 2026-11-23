@@ -8,14 +8,14 @@ Legend: `[ ]` open · `[x]` resolved (add the date and a note)
 
 ## Test and CI placeholders
 
-- [ ] **`backend/tests/core.test.js` sets placeholder env vars** (`MONGO_URI`, `JWT_SECRET`, `NODE_ENV=test`) at the top of the file so the unit tests can import app modules in CI, where there is no `backend/.env`.
+- [ ] **`backend/tests/core.test.js` sets placeholder env vars** (`DATABASE_URL`, `JWT_SECRET`, `NODE_ENV=test`) at the top of the file so the unit tests can import app modules in CI, where there is no `backend/.env`.
   - These values are test-only and never connect to a database. They must **never** be used as real configuration.
   - Better long-term: move them into a shared `tests/helpers/env.js` required first by every test file, so a new unit test can't hit the same "Missing required env var" crash. (Added 2026-11-23 after CI run 45218122003 failed.)
 - [ ] Confirm the latest CI run is green on the commit you actually deploy.
 
 ## Environment variables to set on the host (production values)
 
-- [ ] `MONGO_URI`: MongoDB Atlas (replica set; do not use a single-node database)
+- [ ] `DATABASE_URL`: managed PostgreSQL 16 URL (set `PGSSL=true` if the URL has no SSL settings); run `npm run migrate` against it before first start
 - [ ] `JWT_SECRET`: 32+ random characters, different from any test or dev value
 - [ ] `CORS_ORIGINS`: your real frontend URL(s) only
 - [ ] `TRUST_PROXY_HOPS=1` (the default is 0; without it, rate limiting treats every user behind the host's proxy as one IP)
@@ -49,8 +49,8 @@ Legend: `[ ]` open · `[x]` resolved (add the date and a note)
 
 - [ ] Add sensible upper limits to amounts and quantities, and restrict decimals, in the API validation. Today the API accepts absurd values such as an amount of 1,000,000,000,000 and a quantity with four decimals.
 
-- [ ] MongoDB is a replica set (stock and credit writes rely on transactions)
-- [ ] Atlas backups enabled, and a restore tried at least once
+- [ ] PostgreSQL is a managed instance (stock and credit writes rely on transactions)
+- [ ] Automated Postgres backups enabled, and a restore tried at least once
 - [ ] Indexes: `autoIndex` is still on. Fine for an empty database; revisit once there is real data
 - [ ] Only one backend instance runs (the message queue can send a message twice if two instances drain it at once)
 - [ ] Error monitoring (for example Sentry) and an uptime check on `/api/health`
