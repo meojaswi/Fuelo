@@ -302,6 +302,17 @@ Run each check at 360px (phone), 768px and 1280px in the real browser with real 
 - [ ] **Terms and Privacy:** the footer on Login, Signup and Pricing links to `/terms` and `/privacy`. Both open while signed out and say they are placeholder text. The footer no longer has a Status link.
 - [ ] **Inventory delete:** the trash icon opens a dialog naming the item. Cancel closes it with nothing deleted. **Delete item** shows a spinner, removes only that item, and shows the same "removed" message as before. Close and Cancel are disabled while it runs.
 
+### Onboarding checklist (added 2026-11-23)
+
+- [ ] **New fuel workspace:** sign up, and the Dashboard shows a **Get started** card with "0 of N steps done". Steps are items and prices, tank and nozzle, first sale, and an optional team invite.
+- [ ] **New timber workspace:** the card shows timber items, supplier, purchase, first sale and the optional team invite. Tank and nozzle is not listed.
+- [ ] **Steps tick from real data:** add an item with a price, add a tank and a nozzle, record a sale, and invite a member. After each, reload the Dashboard and that step reads **Done** (the word, not only the tick) and loses its Open button.
+- [ ] **Open buttons:** each **Open** link goes to the right page (Inventory, Tanks, Suppliers, Purchases, New transaction, Members).
+- [ ] **Permissions:** sign in as an attendant. Steps they cannot do (inventory, tanks, members) are not listed. A user with no listed steps sees no card.
+- [ ] **Hide checklist:** the button removes the card and it stays hidden after a reload. Another workspace of the same user still shows its own card.
+- [ ] **Finished workspace:** once every required step is done (the team invite is optional), the card disappears by itself.
+- [ ] **Phone:** at 360px the card does not scroll sideways and the Open and Hide buttons are at least 44px tall.
+
 ---
 
 ## Failure log

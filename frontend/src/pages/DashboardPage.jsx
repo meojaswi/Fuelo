@@ -7,6 +7,7 @@ import DailySummaryCard from "../components/dashboard/DailySummaryCard";
 import ItemStatRow from "../components/dashboard/ItemStatRow";
 import NotificationBanner from "../components/dashboard/NotificationBanner";
 import RecentTransactionList from "../components/dashboard/RecentTransactionList";
+import GetStartedCard from "../components/onboarding/GetStartedCard";
 import SkeletonCard from "../components/shared/SkeletonCard";
 function greeting(name) {
   const hour = new Date().getHours();
@@ -45,6 +46,7 @@ export default function DashboardPage() {
           + Add transaction
         </Link>
       </div>
+      <GetStartedCard />
       {error && (
         <p role="alert" className="text-sm text-red-600">
           Could not load today’s summary. The figures below may be incomplete.

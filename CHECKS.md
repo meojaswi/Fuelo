@@ -71,7 +71,7 @@ Legend: `[ ]` open · `[x]` resolved (add the date and a note)
 Found during the DESIGN.md section 13 pass over every page and layout. Each one was left alone because the fix changes behaviour, needs a design or backend decision, or is bigger than a small edit.
 
 **Verification gap**
-- [ ] **Run `npm run lint` and `npm run build` in `frontend/`, then click through the open states by hand.** Node was not available in the environment that made these edits, so ESLint, Prettier and Vite did not run. Only an esbuild bundle (syntax and imports) and a static render in headless Chrome with mocked data were done. Dialogs, error states, loading states and submits were not exercised in a browser (see QA.md section 7).
+- [ ] **Click through the open states by hand.** Lint and build were run on 2026-11-23 and pass (0 lint errors; one existing react-refresh warning for `useAuth` in `AuthContext.jsx`). Dialogs, error states, loading states and submits were not exercised in a browser; only a static render in headless Chrome with mocked data was done (see QA.md section 7).
 
 **Layout**
 - [ ] **Wide tables scroll inside their own box on phones instead of becoming stacked cards** (DESIGN section 8). Affects Inventory, Messages, Sales report, Pump Report (three tables) and Timber Reports. The page itself does not scroll sideways, but the tables are awkward on a phone. Needs a responsive `Table` component.
