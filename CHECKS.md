@@ -12,6 +12,7 @@ Legend: `[ ]` open · `[x]` resolved (add the date and a note)
   - These values are test-only and never connect to a database. They must **never** be used as real configuration.
   - Better long-term: move them into a shared `tests/helpers/env.js` required first by every test file, so a new unit test can't hit the same "Missing required env var" crash. (Added 2026-11-23 after CI run 45218122003 failed.)
 - [ ] Confirm the latest CI run is green on the commit you actually deploy.
+- [ ] CI runs a Postgres service and sets `DATABASE_URL_TEST`; the Docker stack (`docker compose up --build`) starts with `FUELO_POSTGRES_PASSWORD` and `JWT_SECRET` set (checked 2026-11-24: signup, login and a sale worked).
 
 ## Environment variables to set on the host (production values)
 
