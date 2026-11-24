@@ -1,14 +1,13 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { request, phaseWorkspace, sale } = require("./helpers/api");
+const { request, phaseWorkspace, sale, rows } = require("./helpers/api");
+
+const count = async (sql, params) => (await rows(sql, params))[0].total;
 
 test("credit limits, payments, and part-paid voids preserve collected money as customer credit", async () => {
   const { token, dealer } = await phaseWorkspace("9000000023");
   const other = await phaseWorkspace("9000000024");
-  const LedgerEntry = require("../src/models/ledgerEntry.model");
-  const StockMovement = require("../src/models/stockMovement.model");
-  const MessageJob = require("../src/models/messageJob.model");
-  const scope = { workspaceId: dealer.workspaceId };
+  const workspaceId = dealer.workspaceId;
   const withToken = (path, options = {}) => request(path, { ...options, token });
   const sell = (body) =>
     withToken("/api/transactions", { method: "POST", body: { ...sale, ...body } });
@@ -45,8 +44,13 @@ test("credit limits, payments, and part-paid voids preserve collected money as c
   assert.equal(limited.data.code, "CREDIT_LIMIT_EXCEEDED");
   assert.equal((await withToken("/api/transactions")).data.total, 1);
   assert.equal((await withToken("/api/inventory")).data[0].currentStock, 9);
-  assert.equal(await StockMovement.countDocuments({ ...scope, reason: "sale" }), 1);
-  assert.equal(await MessageJob.countDocuments(scope), 1);
+  assert.equal(
+    await count("SELECT count(*)::int AS total FROM stock_movements WHERE workspace_id = $1 AND reason = 'sale'", [workspaceId]),
+    1
+  );
+  const jobCount = () =>
+    count("SELECT count(*)::int AS total FROM message_jobs WHERE workspace_id = $1", [workspaceId]);
+  assert.equal(await jobCount(), 1);
 
   const override = await sell({ quantity: 2, amount: 100, override: true });
   assert.equal(override.status, 201);
@@ -67,7 +71,10 @@ test("credit limits, payments, and part-paid voids preserve collected money as c
   const overpayment = await pay(159.88);
   assert.equal(overpayment.status, 409);
   assert.equal(overpayment.data.code, "OVERPAYMENT");
-  const queued = await MessageJob.findOne({ ...scope, transactionId: { $exists: false } });
+  const [queued] = await rows(
+    "SELECT body FROM message_jobs WHERE workspace_id = $1 AND transaction_id IS NULL",
+    [workspaceId]
+  );
   assert.match(queued.body, /Payment received.*40\.13/);
   assert.match(queued.body, /Remaining balance.*159\.87/);
 
@@ -99,13 +106,12 @@ test("credit limits, payments, and part-paid voids preserve collected money as c
   assert.equal(voided.status, 200);
   assert.equal((await withToken("/api/inventory")).data[0].currentStock, 9);
   assert.equal((await withToken(customerPath)).data.creditBalance, 59.87);
-  const reversal = await LedgerEntry.findOne({
-    ...scope,
-    transactionId: override.data._id,
-    type: "void_reversal",
-  });
-  assert.equal(reversal.balanceAfter, 59.87);
-  assert.equal(await MessageJob.countDocuments(scope), 3);
+  const [reversal] = await rows(
+    "SELECT balance_after FROM ledger_entries WHERE workspace_id = $1 AND transaction_id = $2 AND type = 'void_reversal'",
+    [workspaceId, override.data._id]
+  );
+  assert.equal(reversal.balance_after, 59.87);
+  assert.equal(await jobCount(), 3);
 
   assert.equal(
     (
@@ -133,16 +139,15 @@ test("fleet aging uses FIFO and a reminder is queued only once per 24 hours", as
   const newer = await serve("/transactions", "POST", { ...sale, amount: 50 });
   const id = older.data.customerId;
   const path = "/customers/" + id;
-  const LedgerEntry = require("../src/models/ledgerEntry.model");
   for (const [posted, days] of [
     [older, 10],
     [newer, 6],
   ]) {
-    await LedgerEntry.updateOne(
-      { workspaceId, transactionId: posted.data._id },
-      { $set: { createdAt: new Date(Date.now() - days * 86400000) } },
-      { timestamps: false, overwriteImmutable: true }
-    );
+    await rows("UPDATE ledger_entries SET created_at = $3 WHERE workspace_id = $1 AND transaction_id = $2", [
+      workspaceId,
+      posted.data._id,
+      new Date(Date.now() - days * 86400000),
+    ]);
   }
   assert.equal(
     (
@@ -166,8 +171,9 @@ test("fleet aging uses FIFO and a reminder is queued only once per 24 hours", as
   const reminder = path + "/reminder";
   const attempts = await Promise.all([serve(reminder, "POST"), serve(reminder, "POST")]);
   assert.deepEqual(attempts.map((r) => r.status).sort(), [202, 429]);
-  const Job = require("../src/models/messageJob.model");
-  const reminders = await Job.find({ workspaceId, body: /baaki/ });
+  const reminders = (
+    await rows("SELECT * FROM message_jobs WHERE workspace_id = $1 AND body ~ 'baaki'", [workspaceId])
+  ).map((job) => ({ contentSid: job.content_sid, contentVariables: job.content_variables }));
   assert.equal(reminders.length, 1);
   assert.equal(reminders[0].contentSid, "HX" + "1".repeat(32));
   assert.deepEqual(reminders[0].contentVariables, {

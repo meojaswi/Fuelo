@@ -1,46 +1,29 @@
-const Customer = require("../models/customer.model");
-const LedgerEntry = require("../models/ledgerEntry.model");
+const sales = require("../repositories/sales");
 const { MAX_MONEY, roundMoney } = require("../utils/money");
 const { fail } = require("./atomic.service");
 
-async function findCreditCustomer(
-  { workspaceId, customerName, customerPhone },
-  { session, compensate }
-) {
-  const filter = { workspaceId, phone: customerPhone };
-  const existing = await Customer.findOne(filter).session(session);
+async function findCreditCustomer({ workspaceId, customerName, customerPhone }, { db }) {
+  const existing = await sales.findCustomerByPhone(db, workspaceId, customerPhone, { lock: true });
   if (existing) return existing;
-
-  let customer;
-  try {
-    customer = await new Customer({ ...filter, name: customerName, isCreditCustomer: true }).save({
-      session,
-    });
-  } catch (err) {
-    if (err.code !== 11000) throw err;
-    if (!session) return Customer.findOne(filter).orFail();
-    err.retryCustomerInsert = true;
-    throw err;
-  }
-  compensate(() => Customer.deleteOne({ ...filter, _id: customer._id, creditBalance: 0 }));
-  return customer;
+  const created = await sales.insertCustomerIfAbsent(db, workspaceId, {
+    phone: customerPhone,
+    name: customerName,
+    isCreditCustomer: true,
+  });
+  // Another request created the customer between the lookup and the insert.
+  return created ?? sales.findCustomerByPhone(db, workspaceId, customerPhone, { lock: true });
 }
 
-async function postEntry(
-  data,
-  { session, compensate },
-  { override = false, allowAdvance = false } = {}
-) {
+// Posts one ledger entry and moves the customer's balance with it. The customer row is locked,
+// so concurrent postings for one customer apply in order.
+async function postEntry(data, { db }, { override = false, allowAdvance = false } = {}) {
   const { workspaceId, customerId, type, direction, amount } = data;
-  const scope = { workspaceId, _id: customerId };
-  const customer = await Customer.findOne(scope).session(session).lean();
+  const customer = await sales.getCustomer(db, workspaceId, customerId, { lock: true });
   if (!customer) fail(404, "Customer not found");
 
-  const rawBalance = customer.creditBalance ?? 0;
-  const balance = roundMoney(rawBalance);
+  const balance = roundMoney(customer.creditBalance ?? 0);
   if (data.affectsBalance === false) {
-    const entry = await new LedgerEntry({ ...data, balanceAfter: balance }).save({ session });
-    compensate(() => LedgerEntry.deleteOne({ workspaceId, _id: entry._id }));
+    const entry = await sales.insertLedgerEntry(db, workspaceId, { ...data, balanceAfter: balance });
     return { entry, customer };
   }
   const balanceAfter = roundMoney(balance + (direction === "debit" ? amount : -amount));
@@ -57,39 +40,11 @@ async function postEntry(
   }
   if (Math.abs(balanceAfter) > MAX_MONEY) fail(409, "Balance exceeds the supported range");
 
-  const filter = { ...scope, creditBalance: customer.creditBalance ?? { $exists: false } };
-  if (type === "credit_sale" && !override) filter.creditLimit = customer.creditLimit ?? null;
-  const update = { $inc: { creditBalance: balanceAfter - rawBalance } };
-  if (type === "credit_sale") update.$set = { isCreditCustomer: true };
-  const updated = await Customer.findOneAndUpdate(filter, update, { new: true, session });
-  if (!updated) fail(409, "Customer balance changed. Refresh and try again.");
-
-  let appliedBalance = updated.creditBalance;
-  compensate(() =>
-    Customer.updateOne(
-      { ...scope, creditBalance: appliedBalance },
-      {
-        $set: {
-          creditBalance: rawBalance,
-          ...(update.$set ? { isCreditCustomer: customer.isCreditCustomer ?? false } : {}),
-        },
-      }
-    )
-  );
-  // Floating-point $inc can leave a sub-paise residue, e.g. 59.870000000000005.
-  // Normalize within the transaction (or the serialized standalone write).
-  if (appliedBalance !== balanceAfter) {
-    const normalized = await Customer.updateOne(
-      { ...scope, creditBalance: appliedBalance },
-      { $set: { creditBalance: balanceAfter } },
-      { session }
-    );
-    if (!normalized.matchedCount) fail(409, "Customer balance changed. Refresh and try again.");
-    appliedBalance = balanceAfter;
-    updated.creditBalance = balanceAfter;
-  }
-  const entry = await new LedgerEntry({ ...data, balanceAfter }).save({ session });
-  compensate(() => LedgerEntry.deleteOne({ workspaceId, _id: entry._id }));
+  const updated = await sales.updateCustomer(db, workspaceId, customerId, {
+    creditBalance: balanceAfter,
+    ...(type === "credit_sale" && { isCreditCustomer: true }),
+  });
+  const entry = await sales.insertLedgerEntry(db, workspaceId, { ...data, balanceAfter });
   return { entry, customer: updated };
 }
 
@@ -115,11 +70,7 @@ async function recordCreditSale(transaction, createdBy, override, context) {
 
 async function reverseCreditSale(transaction, createdBy, context) {
   const { workspaceId, _id: transactionId } = transaction;
-  const original = await LedgerEntry.findOne({
-    workspaceId,
-    transactionId,
-    type: "credit_sale",
-  }).session(context.session);
+  const original = await sales.getLedgerEntryFor(context.db, workspaceId, transactionId, "credit_sale");
   if (!original) return;
 
   // A sale void can leave customer credit if some of the sale was already paid.

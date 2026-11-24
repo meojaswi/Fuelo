@@ -1,4 +1,9 @@
-const { Pool } = require("pg");
+const { Pool, types } = require("pg");
+
+// NUMERIC columns become JSON numbers at the boundary (the plan records the precision limits);
+// DATE columns stay as YYYY-MM-DD strings, matching the API.
+types.setTypeParser(1700, (value) => Number(value));
+types.setTypeParser(1082, (value) => value);
 
 function connectionOptions({ DATABASE_URL: connectionString, PGSSL } = process.env) {
   if (!connectionString) throw new Error("Missing required env var: DATABASE_URL");

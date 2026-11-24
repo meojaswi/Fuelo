@@ -31,11 +31,9 @@ test("roles restrict attendant actions and transaction visibility", async () => 
   assert.equal((await compare(attendant, path + "/receipt.pdf")).status, 404);
   assert.equal((await compare(attendant, "/api/transactions")).data.total, 1);
   assert.equal((await compare(attendant, "/api/dashboard")).data.sales, sale.amount);
-  const Transaction = require("../src/models/transaction.model");
-  await Transaction.updateOne(
-    { workspaceId, _id: own.data._id },
-    { $set: { createdAt: new Date(0) } },
-    { timestamps: false, overwriteImmutable: true }
+  await require("./helpers/api").rows(
+    "UPDATE transactions SET created_at = $3 WHERE workspace_id = $1 AND id = $2",
+    [workspaceId, own.data._id, new Date(0)]
   );
   assert.equal((await compare(attendant, "/api/transactions")).data.total, 0);
   for (const [route, options] of [
@@ -70,10 +68,10 @@ test("members can accept a one-time invite and owner actions revoke access", asy
   assert.equal(invite.status, 201);
   assert.equal(invite.data.status, "invited");
   assert.equal(invite.data.inviteTokenHash, undefined);
-  const job = await require("../src/models/messageJob.model").findOne({
-    workspaceId,
-    sensitive: true,
-  });
+  const [job] = await require("./helpers/api").rows(
+    "SELECT body FROM message_jobs WHERE workspace_id = $1 AND sensitive",
+    [workspaceId]
+  );
   const token = job.body.split("/invite/")[1];
   const accept = () =>
     request("/api/auth/accept-invite", { method: "POST", body: { token, password } });

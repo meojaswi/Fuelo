@@ -2,20 +2,15 @@ const assert = require("node:assert/strict");
 const { once } = require("node:events");
 const http = require("node:http");
 const { after, before } = require("node:test");
-const mongoose = require("mongoose");
-const { MongoMemoryServer, MongoMemoryReplSet } = require("mongodb-memory-server");
 const { isolatedPostgres } = require("./postgres");
 
 // Identity data lives in PostgreSQL; each test file gets its own migrated schema.
 isolatedPostgres();
 
-let mongo;
 let server;
 let baseUrl;
 let proxy;
 let proxyUrl;
-const Dealer = require("../../src/models/dealer.model");
-const Link = require("../../src/models/link.model");
 const identity = require("../../src/repositories/identity");
 const { query } = require("../../src/config/postgres");
 const hashPassword = (...args) => require("../../src/services/auth.service").hashPassword(...args);
@@ -38,13 +33,8 @@ const sale = {
 };
 
 before(async () => {
-  mongo =
-    process.env.FUELO_TEST_STANDALONE === "1"
-      ? await MongoMemoryServer.create()
-      : await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   process.env.NODE_ENV = "test";
   process.env.TRUST_PROXY_HOPS = "1";
-  process.env.MONGO_URI = mongo.getUri();
   process.env.JWT_SECRET = "fuelo-integration-test-secret-only";
   process.env.BCRYPT_SALT_ROUNDS = "4";
   process.env.CORS_ORIGINS = "http://localhost:5173";
@@ -57,8 +47,6 @@ before(async () => {
   process.env.RAZORPAY_WEBHOOK_SECRET = "test-only-webhook";
 
   const app = require("../../src/app");
-  await mongoose.connect(mongo.getUri());
-  await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
   server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -87,8 +75,6 @@ before(async () => {
 after(async () => {
   if (proxy) await new Promise((resolve) => proxy.close(resolve));
   if (server) await new Promise((resolve) => server.close(resolve));
-  await mongoose.disconnect();
-  if (mongo) await mongo.stop();
 });
 
 async function request(
@@ -148,6 +134,17 @@ const UserAccount = {
   },
 };
 
+// Runs SQL against this file's isolated schema and returns the rows.
+async function rows(sql, params) {
+  return (await query(sql, params)).rows;
+}
+
+// Inserts finished sales directly (with chosen timestamps) through the repository.
+async function insertSales(workspaceId, attributes) {
+  const sales = require("../../src/repositories/sales");
+  for (const row of attributes) await sales.insertTransaction({ query }, workspaceId, row);
+}
+
 async function addMember(workspaceId, userId, role, status = "active") {
   await query(
     "INSERT INTO memberships (workspace_id, user_id, role, status) VALUES ($1, $2, $3, $4)",
@@ -200,8 +197,8 @@ module.exports = {
   account,
   sale,
   password,
-  Dealer,
-  Link,
+  rows,
+  insertSales,
   UserAccount,
   hashPassword,
 };

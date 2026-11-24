@@ -1,5 +1,4 @@
-const { Types } = require("mongoose");
-const Transaction = require("../models/transaction.model");
+const sales = require("../repositories/sales");
 const { istDayBoundsUTC } = require("../utils/datetime");
 
 /**
@@ -8,40 +7,7 @@ const { istDayBoundsUTC } = require("../utils/datetime");
  */
 async function getDailySummary(workspaceId, date = new Date(), userId) {
   const { startUTC, endUTC } = istDayBoundsUTC(date);
-  // TEMP(pg-cutover): remove when transaction is ported
-  const actorIds = userId && [
-    String(userId),
-    ...(Types.ObjectId.isValid(userId) ? [new Types.ObjectId(userId)] : []),
-  ];
-
-  const rows = await Transaction.aggregate([
-    {
-      $match: {
-        workspaceId,
-        // TEMP(pg-cutover): remove when transaction is ported
-        ...(actorIds ? { createdBy: { $in: actorIds } } : {}),
-        status: "active",
-        createdAt: { $gte: startUTC, $lt: endUTC },
-      },
-    },
-    {
-      $group: {
-        _id: "$itemType",
-        unit: { $first: "$unit" },
-        totalQuantity: { $sum: { $toDecimal: "$quantity" } },
-        totalAmount: { $sum: { $toDecimal: "$amount" } },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $set: {
-        totalQuantity: { $toDouble: "$totalQuantity" },
-        totalAmount: { $toDouble: { $round: ["$totalAmount", 2] } },
-      },
-    },
-  ]);
-
-  return rows;
+  return sales.dailyItemTotals(workspaceId, startUTC, endUTC, userId);
 }
 
 module.exports = { getDailySummary };

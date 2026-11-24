@@ -1,17 +1,17 @@
 const dashboardService = require("../services/dashboard.service");
 const { roundMoney } = require("../utils/money");
-const Notification = require("../models/notification.model");
+const operations = require("../repositories/operations");
 const { istDateString, istDayBoundsUTC } = require("../utils/datetime");
 
 async function getToday(req, res) {
   const date = istDateString();
   const { startUTC, endUTC } = istDayBoundsUTC(date);
-  const filter = { workspaceId: req.workspaceId, createdAt: { $gte: startUTC, $lt: endUTC } };
+  const window = { from: startUTC, to: endUTC };
   const own = req.user.role === "attendant" ? req.user.userId : null;
   const [rows, sent, failed] = await Promise.all([
     dashboardService.getDailySummary(req.workspaceId, date, own),
-    own ? 0 : Notification.countDocuments({ ...filter, status: "sent" }),
-    own ? 0 : Notification.countDocuments({ ...filter, status: "failed" }),
+    own ? 0 : operations.countNotifications(req.workspaceId, "sent", window),
+    own ? 0 : operations.countNotifications(req.workspaceId, "failed", window),
   ]);
   const items = rows.map((row) => ({
     ...row,

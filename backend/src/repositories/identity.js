@@ -175,7 +175,7 @@ async function getWorkspaceAnyState(workspaceId, db = database) {
 
 async function lockWorkspace(workspaceId, db) {
   const { rows } = await db.query(
-    `SELECT ${workspaceFields} FROM workspaces WHERE id = $1 AND is_active FOR UPDATE`,
+    `SELECT ${workspaceFields} FROM workspaces WHERE id = $1 AND is_active FOR NO KEY UPDATE`,
     [requireWorkspaceId(workspaceId)]
   );
   return withoutNulls(rows[0]);

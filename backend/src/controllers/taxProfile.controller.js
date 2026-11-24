@@ -1,5 +1,5 @@
 const identity = require("../repositories/identity");
-const Inventory = require("../models/inventory.model");
+const sales = require("../repositories/sales");
 const { writeTimber } = require("../services/timberWrite.service");
 const { states, gstinState } = require("../utils/gst");
 const { fail } = require("../services/atomic.service");
@@ -18,14 +18,18 @@ function get(req, res) {
 async function save(req, res) {
   const { pricesIncludeTax, allowAdvances, ...fields } = req.body;
   const profile = { ...fields, state: gstinState(fields.gstin) };
-  const workspace = await writeTimber(req, "gst", () =>
-    identity.patchWorkspace(req.workspaceId, {
-      taxProfile: profile,
-      config: {
-        pricesIncludeTax,
-        ...(allowAdvances !== undefined && { allowAdvances }),
+  const workspace = await writeTimber(req, "gst", ({ db }) =>
+    identity.patchWorkspace(
+      req.workspaceId,
+      {
+        taxProfile: profile,
+        config: {
+          pricesIncludeTax,
+          ...(allowAdvances !== undefined && { allowAdvances }),
+        },
       },
-    })
+      { db }
+    )
   );
   await audit.record(req, {
     action: "tax.profile.update",
@@ -37,16 +41,12 @@ async function save(req, res) {
 }
 
 async function item(req, res) {
-  const updated = await writeTimber(req, "gst", async ({ session }) => {
-    const row = await Inventory.findOneAndUpdate(
-      {
-        workspaceId: req.workspaceId,
-        itemType: req.params.itemType,
-        pricingUnit: { $type: "string" },
-      },
-      { $set: req.body },
-      { new: true, session }
-    );
+  const updated = await writeTimber(req, "gst", async ({ db }) => {
+    const current = await sales.getInventoryItem(db, req.workspaceId, req.params.itemType, {
+      lock: true,
+    });
+    const row =
+      current?.pricingUnit && (await sales.updateInventory(db, req.workspaceId, current._id, req.body));
     if (!row) fail(404, "Timber item not found");
     return row;
   });

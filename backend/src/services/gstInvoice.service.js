@@ -1,33 +1,19 @@
-const Counter = require("../models/invoiceCounter.model");
-const Customer = require("../models/customer.model");
+const sales = require("../repositories/sales");
 const { fail } = require("./atomic.service");
 const { gstTotals, financialYear, gstinState } = require("../utils/gst");
 const { roundMoney } = require("../utils/money");
 
-async function allocateNumber(workspaceId, issuedAt, kind, prefix, { session, compensate }) {
+async function allocateNumber(workspaceId, issuedAt, kind, prefix, { db }) {
   const year = financialYear(issuedAt);
-  const scope = { workspaceId, year, kind };
-  const row = await Counter.findOneAndUpdate(
-    scope,
-    { $inc: { sequence: 1 } },
-    { upsert: true, new: true, session }
-  );
-  compensate(() =>
-    Counter.updateOne({ ...scope, sequence: row.sequence }, { $inc: { sequence: -1 } })
-  );
-  const number = [prefix, year, String(row.sequence).padStart(4, "0")].join("/");
+  const sequence = await sales.nextSequence(db, workspaceId, year, kind);
+  const number = [prefix, year, String(sequence).padStart(4, "0")].join("/");
   if (number.length > 16) fail(409, "The invoice series is full for this financial year");
   return number;
 }
 
-async function quoteTimberSale(workspace, input, lineItems, session) {
+async function quoteTimberSale(workspace, input, lineItems, db) {
   const profile = workspace.taxProfile;
-  const buyer = await Customer.findOne({
-    workspaceId: workspace.workspaceId,
-    phone: input.customerPhone,
-  })
-    .session(session)
-    .lean();
+  const buyer = await sales.findCustomerByPhone(db, workspace.workspaceId, input.customerPhone);
   const gstin = input.customerGstin ?? buyer?.gstin;
   const state = gstin ? gstinState(gstin) : (input.customerState ?? buyer?.state);
   if (gstin && input.customerState && input.customerState !== state)

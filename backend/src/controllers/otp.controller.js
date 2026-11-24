@@ -5,6 +5,7 @@ const identity = require("../repositories/identity");
 const { activeWorkspaces, changeCredentials } = require("./auth.controller");
 const { hashPassword } = require("../services/auth.service");
 const { enqueue } = require("../services/messageQueue.service");
+const { withTransaction } = require("../config/postgres");
 const { buildPasswordOtp } = require("../services/messageBuilder.service");
 const { fail } = require("../services/atomic.service");
 const env = require("../config/env");
@@ -32,14 +33,19 @@ async function request(req, res) {
       if (user?.passwordHash) {
         const [membership] = await activeWorkspaces(user._id);
         if (membership)
-          await enqueue({
+          await withTransaction((db) =>
+            enqueue(
+              {
             workspaceId: membership.workspace.workspaceId,
             channel: "whatsapp",
             toPhone: phone.length === 10 ? "+91" + phone : phone,
             ...buildPasswordOtp(code, membership.workspace),
             sensitive: true,
             deliveryExpiresAt: new Date(+now + 600_000),
-          });
+              },
+              { db }
+            )
+          );
       }
     }
   } catch {

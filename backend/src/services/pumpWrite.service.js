@@ -8,7 +8,7 @@ function writePump(req, feature, work) {
   return atomic(workspaceId, async (context) => {
     const workspace = await lockWorkspace(workspaceId, context);
     checkPump(workspace, feature);
-    await assertCan(workspaceId, "write", { workspace, session: context.session });
+    await assertCan(workspaceId, "write", { workspace, db: context.db });
     return work(context, workspace);
   });
 }

@@ -10,13 +10,24 @@ test("trial usage, concurrent cap, seat limits and expired read-only access", as
   } = owner;
   assert.equal(owner.dealer.billing.trialDaysLeft, 14);
   const { addMember, patchWorkspace } = require("./helpers/api");
-  const Transaction = require("../src/models/transaction.model");
+  const { rows } = require("./helpers/api");
   const { istDateString } = require("../src/utils/datetime");
   const initial = await request("/api/billing/status", { token });
   assert.equal(initial.data.limits.monthlyTransactionCap, 100);
   assert.equal(initial.data.usage.members, 1);
-  await Transaction.insertMany(
-    Array.from({ length: 99 }, () => ({ ...sale, workspaceId, paymentMode: "cash" }))
+  await rows(
+    `INSERT INTO transactions
+       (workspace_id, customer_name, customer_phone, item_type, quantity, unit, amount, payment_mode)
+     SELECT $1, $2, $3, $4, $5, $6, $7, 'cash' FROM generate_series(1, 99)`,
+    [
+      workspaceId,
+      sale.customerName,
+      sale.customerPhone,
+      sale.itemType,
+      sale.quantity,
+      sale.unit,
+      sale.amount,
+    ]
   );
   const sell = () =>
     request("/api/transactions", { token, method: "POST", body: { ...sale, paymentMode: "cash" } });
@@ -93,7 +104,7 @@ test("signed subscription events are idempotent and ordered; grace and cancellat
     dealer: { workspaceId },
   } = owner;
   const { seed } = require("../scripts/seedPlans");
-  const { SubscriptionPlan, LinkedRevenueAccount } = require("../src/models/subscription.model");
+  const { rows } = require("./helpers/api");
   const provider = require("../src/services/razorpay.service");
   const seeded = {
     RAZORPAY_PLAN_GROWTH_MONTHLY: "plan_fuelo_growth",
@@ -101,7 +112,7 @@ test("signed subscription events are idempotent and ordered; grace and cancellat
   };
   assert.deepEqual(await seed(seeded, () => {}), { seeded: 2, skipped: 4 });
   await seed(seeded, () => {});
-  assert.equal(await SubscriptionPlan.countDocuments(), 2);
+  assert.equal((await rows("SELECT count(*)::int AS total FROM subscription_plans"))[0].total, 2);
   const create = t.mock.method(provider, "createSubscription", async () => ({
     id: "sub_fuelo_ci",
   }));
@@ -110,12 +121,11 @@ test("signed subscription events are idempotent and ordered; grace and cancellat
   }));
   const change = t.mock.method(provider, "changePlan", async () => ({}));
   const share = t.mock.method(provider, "transferShare", async () => ({}));
-  await LinkedRevenueAccount.create({
-    ownerName: "Test partner",
-    razorpayAccountId: "acc_test",
-    sharePercent: 30,
-    referredWorkspaceIds: [workspaceId],
-  });
+  await rows(
+    `INSERT INTO linked_revenue_accounts (owner_name, razorpay_account_id, share_percent, referred_workspace_ids)
+     VALUES ($1, $2, $3, $4)`,
+    ["Test partner", "acc_test", 30, JSON.stringify([workspaceId])]
+  );
   const start = (planName = "Growth", billingCycle = "monthly") =>
     request("/api/billing/subscriptions", {
       token,

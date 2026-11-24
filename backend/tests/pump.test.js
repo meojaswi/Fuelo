@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { request, phaseWorkspace, inviteUser, sale } = require("./helpers/api");
 
-const { patchWorkspace } = require("./helpers/api");
+const { patchWorkspace, rows } = require("./helpers/api");
 const { istDateString, istDayBoundsUTC } = require("../src/utils/datetime");
 
 function api(user) {
@@ -217,8 +217,9 @@ test("shift close records exactly the meter litres once and reopen reverses the 
     -300
   );
   await stock(270, 100, 170);
-  const Job = require("../src/models/messageJob.model");
-  const alerts = await Job.find({ workspaceId, body: /₹-300/ });
+  const alerts = (
+    await rows("SELECT * FROM message_jobs WHERE workspace_id = $1 AND body ~ '₹-300'", [workspaceId])
+  ).map((job) => ({ contentSid: job.content_sid, contentVariables: job.content_variables }));
   assert.equal(alerts.length, 1);
   assert.equal(alerts[0].contentSid, "HX" + "2".repeat(32));
   assert.deepEqual(alerts[0].contentVariables, { 1: "Phase Zero Station", 2: "-300.00" });
@@ -260,11 +261,10 @@ test("daily pump report reconciles opening stock, meter sales, dips and CSV for 
   const { first, second, nozzle } = await setupShift(owner);
   const workspaceId = owner.dealer.workspaceId;
   const date = istDateString();
-  const StockMovement = require("../src/models/stockMovement.model");
-  await StockMovement.updateOne(
-    { workspaceId, reason: "purchase", "tankChanges.tankId": first._id },
-    { $set: { createdAt: new Date(+istDayBoundsUTC(date).startUTC - 1000) } },
-    { timestamps: false, overwriteImmutable: true }
+  await rows(
+    `UPDATE stock_movements SET created_at = $3
+      WHERE workspace_id = $1 AND reason = 'purchase' AND tank_changes @> $2::jsonb`,
+    [workspaceId, JSON.stringify([{ tankId: first._id }]), new Date(+istDayBoundsUTC(date).startUTC - 1000)]
   );
   const empty = await serve("/deliveries", "POST", {
     tankId: second._id,
@@ -321,10 +321,9 @@ test("daily pump report reconciles opening stock, meter sales, dips and CSV for 
   assert.equal(tanks.find((tank) => tank.tankId === second._id).flagged, true);
   assert.equal(shifts[0].variance, 0);
   assert.equal(shifts[0].litres, 30);
-  await StockMovement.updateOne(
-    { workspaceId, reason: "purchase", deliveryId: empty.data._id },
-    { $set: { createdAt: new Date(+istDayBoundsUTC(date).startUTC - 500) } },
-    { timestamps: false, overwriteImmutable: true }
+  await rows(
+    "UPDATE stock_movements SET created_at = $3 WHERE workspace_id = $1 AND reason = 'purchase' AND delivery_id = $2",
+    [workspaceId, empty.data._id, new Date(+istDayBoundsUTC(date).startUTC - 500)]
   );
   const nextDayVoid = (await serve(path)).data.items[0];
   assert.equal(nextDayVoid.openingBookStock, 105);

@@ -1,16 +1,14 @@
 const audit = require("../services/audit.service");
-const Inventory = require("../models/inventory.model");
-const PriceHistory = require("../models/priceHistory.model");
-const Transaction = require("../models/transaction.model");
+const sales = require("../repositories/sales");
+const pump = require("../repositories/pump");
+const { query } = require("../config/postgres");
 const { atomic, fail } = require("../services/atomic.service");
 const { recordMovement, changeStock } = require("../services/stock.service");
-const Tank = require("../models/tank.model");
 const { roundMoney } = require("../utils/money");
 const { lockWorkspace } = require("../services/workspaceWrite.service");
 
 async function getAll(req, res) {
-  const items = await Inventory.find({ workspaceId: req.workspaceId }).sort({ itemType: 1 });
-  res.json(items);
+  res.json(await sales.listInventory(req.workspaceId));
 }
 
 function recordAdjustment(req, item, delta, context) {
@@ -33,14 +31,12 @@ async function create(req, res) {
   const { itemType, currentStock = 0, unit, pricePerUnit = 0 } = req.body;
   try {
     const item = await atomic(workspaceId, async (context) => {
-      const entry = await new Inventory({
-        workspaceId,
+      const entry = await sales.insertInventory(context.db, workspaceId, {
         itemType,
         currentStock,
         unit,
         pricePerUnit,
-      }).save({ session: context.session });
-      context.compensate(() => Inventory.deleteOne({ workspaceId, _id: entry._id }));
+      });
       await recordAdjustment(req, entry, currentStock, context);
       return entry;
     });
@@ -53,31 +49,36 @@ async function create(req, res) {
     });
     res.status(201).json(item);
   } catch (err) {
-    if (err.code !== 11000) throw err;
+    if (err.code !== "23505") throw err;
     res.status(409).json({ error: `Inventory entry for "${itemType}" already exists` });
   }
 }
 
 async function update(req, res) {
   const { workspaceId } = req;
-  const scope = { workspaceId, itemType: req.params.itemType };
   const { currentStock, pricePerUnit } = req.body;
   const { item, changes } = await atomic(workspaceId, async (context) => {
-    const { session, compensate } = context;
+    const { db } = context;
     await lockWorkspace(workspaceId, context);
-    const previous = await Inventory.findOne(scope).session(session);
+    const previous = await sales.getInventoryItem(db, workspaceId, req.params.itemType, {
+      lock: true,
+    });
     if (!previous) fail(404, "Inventory item not found");
     if (previous.pricingUnit && currentStock !== undefined)
       fail(409, "Adjust timber stock with quantity and pieces together");
 
     const updates = {};
     const tracked =
-      currentStock !== undefined &&
-      (await Tank.exists({ ...scope, isActive: true }).session(session));
+      currentStock !== undefined && (await pump.hasTanks(db, workspaceId, previous.itemType, { activeOnly: true }));
     const delta = tracked ? roundMoney(roundMoney(currentStock) - previous.currentStock) : 0;
     const stock = delta
       ? await changeStock(
-          { filter: scope, delta, reason: "manual_adjust", createdBy: req.user.userId },
+          {
+            filter: { workspaceId, itemType: previous.itemType },
+            delta,
+            reason: "manual_adjust",
+            createdBy: req.user.userId,
+          },
           context
         )
       : previous;
@@ -93,33 +94,21 @@ async function update(req, res) {
         changes: { stock: Boolean(delta), previousStock: previous.currentStock },
       };
 
-    const filter = {
-      ...scope,
-      _id: previous._id,
+    const entry = await sales.updateInventory(db, workspaceId, previous._id, updates, {
       currentStock: stock.currentStock,
       pricePerUnit: previous.pricePerUnit,
-    };
-    const entry = await Inventory.findOneAndUpdate(
-      filter,
-      { $set: updates },
-      { new: true, session }
-    );
+    });
     if (!entry) fail(409, "Inventory changed. Refresh and try again.");
-    const original = Object.fromEntries(Object.keys(updates).map((key) => [key, previous[key]]));
-    compensate(() =>
-      Inventory.updateOne({ workspaceId, _id: previous._id, ...updates }, { $set: original })
-    );
     if (!tracked)
       await recordAdjustment(req, entry, entry.currentStock - previous.currentStock, context);
     if (updates.pricePerUnit !== undefined) {
-      await new PriceHistory({
-        workspaceId,
+      await sales.insertPriceHistory(db, workspaceId, {
         itemType: entry.itemType,
         oldPrice: previous.pricePerUnit,
         newPrice: entry.pricePerUnit,
         changedBy: req.user.userId,
         changedAt: entry.lastPriceUpdate,
-      }).save({ session });
+      });
     }
     return {
       item: entry,
@@ -152,24 +141,19 @@ async function update(req, res) {
 
 async function remove(req, res) {
   const { workspaceId } = req;
-  const scope = { workspaceId, itemType: req.params.itemType };
   const removed = await atomic(workspaceId, async (context) => {
-    const { session, compensate } = context;
+    const { db } = context;
     await lockWorkspace(workspaceId, context);
-    if (await Tank.exists(scope).session(session))
+    const item = await sales.getInventoryItem(db, workspaceId, req.params.itemType, { lock: true });
+    if (await pump.hasTanks(db, workspaceId, req.params.itemType))
       fail(409, "Inventory linked to tanks cannot be removed");
-    if (await Inventory.exists({ ...scope, pricingUnit: { $type: "string" } }).session(session))
-      fail(409, "Configured timber inventory retains its stock history");
-    const item = await Inventory.findOneAndDelete(scope, { session });
+    if (item?.pricingUnit) fail(409, "Configured timber inventory retains its stock history");
     if (!item) fail(404, "Inventory item not found");
-    compensate(() => Inventory.create(item.toObject()));
-    if (
-      await Transaction.exists({ workspaceId, inventoryId: item._id, status: "active" }).session(
-        session
-      )
-    ) {
+    if (await sales.hasActiveSalesFor(db, workspaceId, item._id)) {
       fail(409, "Inventory with active sales cannot be removed because voiding restores stock");
     }
+    // The row stays (flagged removed) so voided sales keep pointing at their original item.
+    await sales.removeInventory(db, workspaceId, item._id);
     await recordAdjustment(
       req,
       { itemType: item.itemType, currentStock: 0 },
@@ -189,10 +173,7 @@ async function remove(req, res) {
 }
 
 async function getPrices(req, res) {
-  const items = await Inventory.find({ workspaceId: req.workspaceId })
-    .select("itemType unit pricePerUnit -_id")
-    .sort({ itemType: 1 });
-  res.json(items);
+  res.json(await sales.listPrices(req.workspaceId, { query }));
 }
 
 module.exports = { getAll, getPrices, create, update, remove };

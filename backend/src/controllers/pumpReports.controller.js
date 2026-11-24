@@ -1,9 +1,4 @@
-const Tank = require("../models/tank.model");
-const StockMovement = require("../models/stockMovement.model");
-const DipReading = require("../models/dipReading.model");
-const Shift = require("../models/shift.model");
-const Delivery = require("../models/delivery.model");
-const Transaction = require("../models/transaction.model");
+const pump = require("../repositories/pump");
 const identity = require("../repositories/identity");
 const { IST_TIME_ZONE, istDayBoundsUTC } = require("../utils/datetime");
 const { roundMoney: round } = require("../utils/money");
@@ -39,49 +34,20 @@ async function daily(req, res) {
   if (format === "csv")
     await assertCan(workspaceId, "feature:csvExport", { workspace: pumpWorkspace });
   const { startUTC, endUTC } = bounds;
-  const window = { $gte: startUTC, $lt: endUTC };
+  const window = { from: startUTC, to: endUTC };
   const threshold = pumpWorkspace.config?.pumpVariancePercent ?? 0.5;
   const [tanks, opening, posted, shifts, dips] = await Promise.all([
-    Tank.find({ workspaceId, createdAt: { $lt: endUTC } })
-      .sort({ itemType: 1, name: 1 })
-      .lean(),
-    StockMovement.aggregate([
-      { $match: { workspaceId, createdAt: { $lt: startUTC }, "tankChanges.0": { $exists: true } } },
-      { $unwind: "$tankChanges" },
-      {
-        $group: {
-          _id: "$tankChanges.tankId",
-          opening: { $sum: { $toDecimal: "$tankChanges.delta" } },
-        },
-      },
-      { $set: { opening: { $toDouble: "$opening" } } },
-    ]),
-    StockMovement.find({ workspaceId, createdAt: window, "tankChanges.0": { $exists: true } })
-      .select("reason tankChanges deliveryId transactionId")
-      .lean(),
-    Shift.find({ workspaceId, status: "closed", closedAt: window })
-      .sort({ closedAt: 1, _id: 1 })
-      .lean(),
-    DipReading.aggregate([
-      { $match: { workspaceId, recordedAt: window } },
-      { $sort: { recordedAt: -1, _id: -1 } },
-      { $group: { _id: "$tankId", latest: { $first: "$$ROOT" } } },
-    ]),
+    pump.tanksCreatedBefore(workspaceId, endUTC),
+    pump.openingTankStock(workspaceId, startUTC),
+    pump.tankMovementsBetween(workspaceId, window),
+    pump.closedShiftsBetween(workspaceId, window),
+    pump.latestDips(workspaceId, window),
   ]);
-  const [voidedDeliveries, voidedSales] = await Promise.all(
-    [
-      [Delivery, "deliveryId"],
-      [Transaction, "transactionId"],
-    ].map(async ([model, key]) => {
-      const ids = posted.flatMap((entry) => (entry[key] ? [entry[key]] : []));
-      if (!ids.length) return new Set();
-      const records = await model
-        .find({ workspaceId, _id: { $in: ids }, status: "voided" })
-        .select("_id")
-        .lean();
-      return new Set(records.map(({ _id }) => String(_id)));
-    })
-  );
+  const idsFor = (key) => posted.flatMap((entry) => (entry[key] ? [entry[key]] : []));
+  const [voidedDeliveries, voidedSales] = await Promise.all([
+    pump.voidedIds(workspaceId, "deliveries", idsFor("deliveryId")),
+    pump.voidedIds(workspaceId, "transactions", idsFor("transactionId")),
+  ]);
   const byId = new Map(
     tanks.map((tank) => [
       String(tank._id),

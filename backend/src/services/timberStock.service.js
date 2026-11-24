@@ -1,15 +1,14 @@
-const Inventory = require("../models/inventory.model");
+const sales = require("../repositories/sales");
 const { timberQuantity, timberAmount } = require("../utils/timber");
 const { changeStock } = require("./stock.service");
 const { fail } = require("./atomic.service");
 
-async function calculateLines(workspaceId, input, session, purchase = false) {
-  const items = await Inventory.find({
+async function calculateLines(workspaceId, input, db, purchase = false) {
+  const items = await sales.getInventoryItems(
+    db,
     workspaceId,
-    itemType: { $in: input.map(({ itemType }) => itemType) },
-  })
-    .session(session)
-    .lean();
+    input.map(({ itemType }) => itemType)
+  );
   const byType = new Map(items.map((item) => [item.itemType, item]));
   return input.map((line) => {
     const item = byType.get(line.itemType);

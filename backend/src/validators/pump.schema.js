@@ -2,7 +2,7 @@ const { z } = require("zod");
 const { MAX_MONEY, roundMoney } = require("../utils/money");
 const { fail } = require("../services/atomic.service");
 
-const id = z.string().regex(/^[a-f0-9]{24}$/i);
+const id = z.string().uuid();
 const text = z.string().trim().min(1).max(160);
 const amount = z.number().min(0).max(MAX_MONEY).transform(roundMoney);
 const positive = z.number().min(0.005).max(MAX_MONEY).transform(roundMoney);

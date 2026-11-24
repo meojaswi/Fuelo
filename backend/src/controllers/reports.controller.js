@@ -1,14 +1,10 @@
 const { assertCan } = require("../services/entitlements.service");
 const { csvLabel } = require("../utils/csv");
-const Transaction = require("../models/transaction.model");
+const salesRepo = require("../repositories/sales");
 const { IST_TIME_ZONE, istDayBoundsUTC } = require("../utils/datetime");
 const { fail } = require("../services/atomic.service");
 
-const groups = new Map([
-  ["day", { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: IST_TIME_ZONE } }],
-  ["item", "$itemType"],
-  ["paymentMode", "$paymentMode"],
-]);
+const groups = new Set(["day", "item", "paymentMode"]);
 const DAY_MS = 86400000;
 
 function reportBounds(from, to) {
@@ -39,62 +35,12 @@ async function sales(req, res) {
   }
   const { startUTC, endUTC } = reportBounds(from, to);
   await assertCan(req.workspaceId, format === "csv" ? "feature:csvExport" : "feature:reports");
-  const [
-    {
-      groups: grouped,
-      totals: [totals = { quantity: 0, amount: 0, count: 0 }],
-    },
-  ] = await Transaction.aggregate([
-    {
-      $match: {
-        workspaceId: req.workspaceId,
-        status: "active",
-        createdAt: { $gte: startUTC, $lt: endUTC },
-      },
-    },
-    {
-      $group: {
-        _id: groups.get(groupBy),
-        quantity: { $sum: { $toDecimal: "$quantity" } },
-        amount: { $sum: { $toDecimal: "$amount" } },
-        count: { $sum: 1 },
-      },
-    },
-    {
-      $facet: {
-        groups: [
-          { $sort: { _id: 1 } },
-          {
-            $project: {
-              _id: 0,
-              group: "$_id",
-              quantity: { $toDouble: "$quantity" },
-              amount: { $toDouble: { $round: ["$amount", 2] } },
-              count: 1,
-            },
-          },
-        ],
-        totals: [
-          {
-            $group: {
-              _id: null,
-              quantity: { $sum: "$quantity" },
-              amount: { $sum: "$amount" },
-              count: { $sum: "$count" },
-            },
-          },
-          {
-            $project: {
-              _id: 0,
-              quantity: { $toDouble: "$quantity" },
-              amount: { $toDouble: { $round: ["$amount", 2] } },
-              count: 1,
-            },
-          },
-        ],
-      },
-    },
-  ]);
+  const { groups: grouped, totals: totalRows } = await salesRepo.salesReport(req.workspaceId, {
+    start: startUTC,
+    end: endUTC,
+    groupBy,
+  });
+  const [totals = { quantity: 0, amount: 0, count: 0 }] = totalRows;
 
   if (format === "csv") {
     const lines = [

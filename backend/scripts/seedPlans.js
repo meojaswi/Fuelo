@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
 const { plans } = require("../src/config/plans");
-const { SubscriptionPlan } = require("../src/models/subscription.model");
+const operations = require("../src/repositories/operations");
+const { getPool } = require("../src/config/postgres");
 
 async function seed(env = process.env, warn = console.warn) {
   let seeded = 0;
@@ -14,18 +14,14 @@ async function seed(env = process.env, warn = console.warn) {
         skipped++;
         continue;
       }
-      await SubscriptionPlan.updateOne(
-        { name, billingCycle },
-        {
-          $set: {
-            priceInPaise: price * 100,
-            transactionCap: limits.monthlyTransactionCap,
-            planLimits: limits,
-            razorpayPlanId,
-          },
-        },
-        { upsert: true, runValidators: true }
-      );
+      await operations.upsertPlan({
+        name,
+        billingCycle,
+        priceInPaise: price * 100,
+        transactionCap: limits.monthlyTransactionCap,
+        planLimits: limits,
+        razorpayPlanId,
+      });
       seeded++;
     }
   }
@@ -35,18 +31,15 @@ async function seed(env = process.env, warn = console.warn) {
 async function main() {
   const path = require("node:path");
   require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-  if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required");
-  await mongoose.connect(process.env.MONGO_URI);
   try {
-    await SubscriptionPlan.init();
     console.log(JSON.stringify(await seed()));
   } finally {
-    await mongoose.disconnect();
+    await getPool().end();
   }
 }
 if (require.main === module)
   main().catch(() => {
-    console.error("Plan seed failed. Check database connectivity and plan indexes.");
+    console.error("Plan seed failed. Check DATABASE_URL and that migrations have run.");
     process.exitCode = 1;
   });
 module.exports = { seed };

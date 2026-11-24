@@ -7,7 +7,7 @@ function writeTimber(req, feature, work) {
   return atomic(req.workspaceId, async (context) => {
     const workspace = await lockWorkspace(req.workspaceId, context);
     checkTimber(workspace, feature);
-    await assertCan(req.workspaceId, "write", { workspace, session: context.session });
+    await assertCan(req.workspaceId, "write", { workspace, db: context.db });
     return work(context, workspace);
   });
 }

@@ -1,5 +1,5 @@
-const Transaction = require("../models/transaction.model");
-const CreditNote = require("../models/creditNote.model");
+const sales = require("../repositories/sales");
+const { query } = require("../config/postgres");
 const { istDateString, istDayBoundsUTC } = require("../utils/datetime");
 const { roundMoney } = require("../utils/money");
 const { assertCan } = require("../services/entitlements.service");
@@ -18,7 +18,7 @@ function range(query) {
     const end = istDayBoundsUTC(to).endUTC;
     if (end <= start || end - start > 366 * 86400000)
       fail(400, "Choose a date range of up to 366 days");
-    return { $gte: start, $lt: end };
+    return { from: start, to: end };
   } catch (err) {
     if (err instanceof RangeError) fail(400, "Enter valid dates");
     throw err;
@@ -28,25 +28,7 @@ function range(query) {
 async function summary(req, res) {
   const { workspaceId } = req;
   const window = range(req.query);
-  const filter = { workspaceId, "invoice.type": "tax_invoice" };
-  const notes = await CreditNote.find({ workspaceId, issuedAt: window }).lean();
-  const invoices = await Transaction.find({
-    ...filter,
-    "invoice.issuedAt": window,
-    $or: [{ status: "active" }, { creditNoteId: { $exists: true } }],
-  })
-    .select("invoice")
-    .lean();
-  const credited = new Map(
-    (
-      await Transaction.find({
-        ...filter,
-        _id: { $in: notes.map((note) => note.transactionId) },
-      })
-        .select("invoice")
-        .lean()
-    ).map((tx) => [String(tx._id), tx.invoice])
-  );
+  const { notes, invoices, credited } = await sales.taxInvoicesInWindow(workspaceId, window, { query });
   const groups = new Map();
   function add(invoice, date, sign) {
     const month = istDateString(date).slice(0, 7);
@@ -70,9 +52,9 @@ async function summary(req, res) {
     }
   }
   // A credit note reduces the issued invoice in its own period. Keep both sides of that pair.
-  for (const { invoice } of invoices) add(invoice, invoice.issuedAt, 1);
+  for (const { invoice } of invoices) add(invoice, new Date(invoice.issuedAt), 1);
   for (const note of notes) {
-    const invoice = credited.get(String(note.transactionId));
+    const invoice = credited.get(note.transactionId);
     if (invoice) add(invoice, note.issuedAt, -1);
   }
   const rows = [...groups.values()].sort(

@@ -1,13 +1,10 @@
 const { istDayBoundsUTC } = require("./datetime");
 
+// Attendants only see their own sales from today; everyone else sees the whole workspace.
 function transactionScope(req) {
-  const filter = { workspaceId: req.workspaceId };
-  if (req.user.role === "attendant") {
-    const { startUTC, endUTC } = istDayBoundsUTC();
-    filter.createdBy = req.user.userId;
-    filter.createdAt = { $gte: startUTC, $lt: endUTC };
-  }
-  return filter;
+  if (req.user.role !== "attendant") return {};
+  const { startUTC, endUTC } = istDayBoundsUTC();
+  return { createdBy: req.user.userId, from: startUTC, to: endUTC };
 }
 
 module.exports = { transactionScope };

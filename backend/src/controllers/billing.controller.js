@@ -2,14 +2,12 @@ const crypto = require("node:crypto");
 const env = require("../config/env");
 const logger = require("../utils/logger");
 const identity = require("../repositories/identity");
-const {
-  SubscriptionPlan,
-  WorkspaceSubscription,
-  LinkedRevenueAccount,
-} = require("../models/subscription.model");
-const WebhookEvent = require("../models/webhookEvent.model");
+const operations = require("../repositories/operations");
+const { query } = require("../config/postgres");
 const provider = require("../services/razorpay.service");
 const { atomic, fail } = require("../services/atomic.service");
+
+const db = { query };
 const { lockWorkspace } = require("../services/workspaceWrite.service");
 const { getEntitlements } = require("../services/entitlements.service");
 const { plans } = require("../config/plans");
@@ -24,21 +22,14 @@ async function providerCall(work) {
 }
 
 async function getPlan(body) {
-  if (typeof body?.planId === "string" && /^[a-f0-9]{24}$/i.test(body.planId)) {
-    return SubscriptionPlan.findById(body.planId);
-  }
+  if (typeof body?.planId === "string") return operations.getPlan({ id: body.planId });
   if (typeof body?.planName !== "string" || !["monthly", "yearly"].includes(body?.billingCycle))
     fail(400, "Choose a plan and billing cycle");
-  return SubscriptionPlan.findOne({ name: body.planName, billingCycle: body.billingCycle });
+  return operations.getPlan({ name: body.planName, billingCycle: body.billingCycle });
 }
 
-async function currentLink(workspace) {
-  const { workspaceId, currentSubscriptionId } = workspace;
-  return WorkspaceSubscription.findOne(
-    currentSubscriptionId
-      ? { workspaceId, razorpaySubscriptionId: currentSubscriptionId }
-      : { workspaceId, status: { $in: ["active", "halted"] } }
-  ).sort({ createdAt: -1 });
+function currentLink(workspace) {
+  return operations.currentSubscription(workspace.workspaceId, workspace);
 }
 
 function checkout(subscriptionId) {
@@ -52,7 +43,7 @@ async function status(req, res) {
   const link = await currentLink(workspace);
   const scheduled =
     link?.pendingPlanId &&
-    (await SubscriptionPlan.findById(link.pendingPlanId).select("name billingCycle"));
+    (await operations.getPlan({ id: link.pendingPlanId }));
   res.json({
     ...details,
     nextRenewal: details.currentPeriodEnd,
@@ -82,7 +73,7 @@ async function createSubscription(req, res) {
     if (active && ["active", "halted"].includes(active.status)) {
       if (active.status !== "active" || workspace.cancelAtCycleEnd)
         fail(409, "Resolve the current subscription before changing plans");
-      if (String(active.planId) === String(plan._id) && !active.pendingPlanId)
+      if (active.planId === plan._id && !active.pendingPlanId)
         fail(409, "This is your current plan");
       await providerCall(async () => {
         try {
@@ -97,18 +88,15 @@ async function createSubscription(req, res) {
           throw err;
         }
       });
-      await WorkspaceSubscription.updateOne(
-        { workspaceId, _id: active._id },
-        { $set: { pendingPlanId: plan._id } }
-      );
+      await operations.updateSubscription(db, workspaceId, active._id, { pendingPlanId: plan._id });
       return { body: { scheduled: true, message: "Plan change scheduled for the next cycle." } };
     }
     if (workspace.pendingSubscriptionId) {
-      const pending = await WorkspaceSubscription.findOne({
+      const pending = await operations.findSubscription(
         workspaceId,
-        razorpaySubscriptionId: workspace.pendingSubscriptionId,
-        status: "created",
-      });
+        workspace.pendingSubscriptionId,
+        "created"
+      );
       if (pending && String(pending.planId) === String(plan._id)) {
         return { body: { checkout: checkout(pending.razorpaySubscriptionId) } };
       }
@@ -121,8 +109,7 @@ async function createSubscription(req, res) {
         totalCount: plan.billingCycle === "yearly" ? 5 : 12,
       })
     );
-    const link = await WorkspaceSubscription.create({
-      workspaceId,
+    const link = await operations.insertSubscription(db, workspaceId, {
       planId: plan._id,
       razorpaySubscriptionId: remote.id,
       status: "created",
@@ -185,10 +172,13 @@ async function cancel(req, res) {
     }
     if (!workspace.pendingSubscriptionId) fail(404, "No subscription to cancel");
     await providerCall(() => provider.cancelSubscription(workspace.pendingSubscriptionId, false));
-    await WorkspaceSubscription.updateOne(
-      { workspaceId, razorpaySubscriptionId: workspace.pendingSubscriptionId, status: "created" },
-      { $set: { status: "cancelled" } }
+    const pendingLink = await operations.findSubscription(
+      workspaceId,
+      workspace.pendingSubscriptionId,
+      "created"
     );
+    if (pendingLink)
+      await operations.updateSubscription(db, workspaceId, pendingLink._id, { status: "cancelled" });
     await identity.patchWorkspace(
       workspaceId,
       { pendingSubscriptionId: null },
@@ -238,13 +228,12 @@ function signed(req) {
 
 async function transferRevenue(workspaceId, payment) {
   if (!payment?.id || !Number.isSafeInteger(payment.amount) || payment.amount <= 0) return;
-  const linkedAccount = await LinkedRevenueAccount.findOne({ referredWorkspaceIds: workspaceId });
+  const linkedAccount = await operations.findLinkedAccountFor(workspaceId);
   if (!linkedAccount) return;
   try {
     // A provider can emit multiple event IDs for the same payment.
-    await WebhookEvent.create({ provider: "razorpay", eventId: "transfer:" + payment.id });
-  } catch (err) {
-    if (err.code === 11000) return;
+    if (!(await operations.recordWebhookEvent("razorpay", "transfer:" + payment.id))) return;
+  } catch {
     logger.error({ msg: "Revenue split reservation failed", paymentId: payment.id });
     return;
   }
@@ -275,116 +264,69 @@ async function handleWebhook(req, res) {
   const providerId = subscription.id;
   const eventId =
     req.get("x-razorpay-event-id") || crypto.createHash("sha256").update(req.rawBody).digest("hex");
-  const eventKey = { provider: "razorpay", eventId: "event:" + eventId };
-  const known = await WorkspaceSubscription.findOne({
-    razorpaySubscriptionId: providerId,
-  }).setOptions({ skipWorkspaceGuard: true });
+  const eventKey = "event:" + eventId;
+  const known = await operations.findSubscriptionByProviderId(providerId);
   if (!known) return res.json({ ok: true, ignored: true });
   const { workspaceId } = known;
-  let outcome;
-  // TEMP(pg-cutover): the subscription records are still MongoDB-backed, so the workspace row is
-  // updated after that transaction commits. Fold both into one PostgreSQL transaction when the
-  // billing models are ported.
-  let workspaceChange = null;
-  try {
-    outcome = await atomic(workspaceId, async (context) => {
-      const { session, compensate } = context;
-      const workspace = await lockWorkspace(workspaceId, context);
-      workspaceChange = null;
-      if (
-        await WebhookEvent.exists({
-          provider: "razorpay",
-          eventId: { $in: [eventId, eventKey.eventId] },
-        }).session(session)
-      )
-        return "deduped";
-      const marker = await new WebhookEvent(eventKey).save({ session });
-      compensate(() => WebhookEvent.deleteOne({ _id: marker._id }));
-      const find = { workspaceId, razorpaySubscriptionId: providerId };
-      const link = await WorkspaceSubscription.findOne(find).session(session);
-      const [linkStatus, workspaceStatus, rank] = spec;
-      const sameSecondDominates = eventAt === link.lastEventAt && rank <= (link.lastEventRank ?? 0);
-      if (eventAt < (link.lastEventAt ?? 0) || sameSecondDominates) return "ignored";
+  const outcome = await atomic(workspaceId, async (context) => {
+    const { db: tdb } = context;
+    const workspace = await lockWorkspace(workspaceId, context);
+    // The event marker is written first; a repeated delivery finds it and stops here.
+    if (await operations.webhookEventSeen("razorpay", [eventId, eventKey], tdb)) return "deduped";
+    if (!(await operations.recordWebhookEvent("razorpay", eventKey, tdb))) return "deduped";
+    const link = await operations.findSubscription(workspaceId, providerId, undefined, tdb);
+    const [linkStatus, workspaceStatus, rank] = spec;
+    const sameSecondDominates = eventAt === link.lastEventAt && rank <= (link.lastEventRank ?? 0);
+    if (eventAt < (link.lastEventAt ?? 0) || sameSecondDominates) return "ignored";
 
-      const plan =
-        typeof subscription.plan_id === "string"
-          ? await SubscriptionPlan.findOne({ razorpayPlanId: subscription.plan_id }).session(
-              session
-            )
-          : await SubscriptionPlan.findById(link.planId).session(session);
-      const end = periodEnd(subscription);
-      const linkSet = {
-        lastEventAt: eventAt,
-        lastEventRank: rank,
-        ...(linkStatus && { status: linkStatus }),
-        ...(end && { currentPeriodEnd: end }),
-        ...(plan && { planId: plan._id }),
-      };
-      const previous = Object.fromEntries(
-        [...Object.keys(linkSet), "pendingPlanId"].map((key) => [key, link[key]])
-      );
-      const finishedChange = plan && String(link.pendingPlanId) === String(plan._id);
-      await WorkspaceSubscription.updateOne(
-        find,
-        { $set: linkSet, ...(finishedChange && { $unset: { pendingPlanId: 1 } }) },
-        { session }
-      );
-      compensate(() =>
-        WorkspaceSubscription.updateOne(find, {
-          $set: Object.fromEntries(
-            Object.entries(previous).filter(([, value]) => value !== undefined)
-          ),
-          $unset: Object.fromEntries(
-            Object.entries(previous)
-              .filter(([, value]) => value === undefined)
-              .map(([key]) => [key, 1])
-          ),
-        })
-      );
-
-      const current = workspace.currentSubscriptionId === providerId;
-      const pending = workspace.pendingSubscriptionId === providerId;
-      if (
-        !current &&
-        !pending &&
-        (workspace.currentSubscriptionId || workspace.pendingSubscriptionId)
-      )
-        return "ignored";
-      const terminal = workspaceStatus === "cancelled" || workspaceStatus === "expired";
-      const clearPending =
-        pending && (terminal || workspaceStatus === "active" || workspaceStatus === "past_due");
-      if (pending && !current && terminal) {
-        workspaceChange = { pendingSubscriptionId: null };
-        return "applied";
-      }
-      const set = { ...(end && { currentPeriodEnd: end }) };
-      const unset = {};
-      if (workspaceStatus) {
-        set.subscriptionStatus = workspaceStatus;
-        set.currentSubscriptionId = providerId;
-        if (workspaceStatus === "past_due")
-          set.pastDueSince = workspace.pastDueSince || new Date(eventAt * 1000);
-        else unset.pastDueSince = 1;
-        if (terminal || (pending && !current)) set.cancelAtCycleEnd = false;
-      }
-      if (plan && (current || workspaceStatus === "active" || workspaceStatus === "past_due")) {
-        set.planName = plan.name;
-        set.planLimits = plan.planLimits || plans.find((item) => item.name === plan.name)?.limits;
-      }
-      if (clearPending) unset.pendingSubscriptionId = 1;
-      workspaceChange = {
-        ...set,
-        ...Object.fromEntries(Object.keys(unset).map((key) => [key, null])),
-      };
-      return "applied";
+    const plan =
+      typeof subscription.plan_id === "string"
+        ? await operations.getPlanByProviderId(subscription.plan_id, tdb)
+        : await operations.getPlan({ id: link.planId }, tdb);
+    const end = periodEnd(subscription);
+    const finishedChange = plan && link.pendingPlanId === plan._id;
+    await operations.updateSubscription(tdb, workspaceId, link._id, {
+      lastEventAt: eventAt,
+      lastEventRank: rank,
+      ...(linkStatus && { status: linkStatus }),
+      ...(end && { currentPeriodEnd: end }),
+      ...(plan && { planId: plan._id }),
+      ...(finishedChange && { pendingPlanId: null }),
     });
-  } catch (err) {
-    if (err.code === 11000) return res.json({ ok: true, deduped: true });
-    throw err;
-  }
 
-  if (outcome === "applied" && workspaceChange && Object.keys(workspaceChange).length)
-    await identity.patchWorkspace(workspaceId, workspaceChange);
+    const current = workspace.currentSubscriptionId === providerId;
+    const pending = workspace.pendingSubscriptionId === providerId;
+    if (
+      !current &&
+      !pending &&
+      (workspace.currentSubscriptionId || workspace.pendingSubscriptionId)
+    )
+      return "ignored";
+    const terminal = workspaceStatus === "cancelled" || workspaceStatus === "expired";
+    const clearPending =
+      pending && (terminal || workspaceStatus === "active" || workspaceStatus === "past_due");
+    if (pending && !current && terminal) {
+      await identity.patchWorkspace(workspaceId, { pendingSubscriptionId: null }, { db: tdb });
+      return "applied";
+    }
+    const changes = { ...(end && { currentPeriodEnd: end }) };
+    if (workspaceStatus) {
+      changes.subscriptionStatus = workspaceStatus;
+      changes.currentSubscriptionId = providerId;
+      changes.pastDueSince =
+        workspaceStatus === "past_due"
+          ? (workspace.pastDueSince ?? new Date(eventAt * 1000))
+          : null;
+      if (terminal || (pending && !current)) changes.cancelAtCycleEnd = false;
+    }
+    if (plan && (current || workspaceStatus === "active" || workspaceStatus === "past_due")) {
+      changes.planName = plan.name;
+      changes.planLimits = plan.planLimits || plans.find((item) => item.name === plan.name)?.limits;
+    }
+    if (clearPending) changes.pendingSubscriptionId = null;
+    if (Object.keys(changes).length) await identity.patchWorkspace(workspaceId, changes, { db: tdb });
+    return "applied";
+  });
 
   // A late charge still needs its revenue share; ordering only protects the subscription state.
   if (outcome !== "deduped" && event.event === "subscription.charged") {

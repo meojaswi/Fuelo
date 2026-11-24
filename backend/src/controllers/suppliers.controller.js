@@ -1,20 +1,20 @@
-const Supplier = require("../models/supplier.model");
-const Entry = require("../models/supplierLedgerEntry.model");
+const timber = require("../repositories/timber");
+const { query } = require("../config/postgres");
 const { fail } = require("../services/atomic.service");
 const { writeTimber } = require("../services/timberWrite.service");
 const { postSupplierEntry } = require("../services/supplierLedger.service");
 const audit = require("../services/audit.service");
 
-const scopeFor = (req) => ({ workspaceId: req.workspaceId, _id: req.params.id });
+const db = { query };
 
 async function list(req, res) {
-  const filter = { workspaceId: req.workspaceId };
-  if (req.query.active === "true") filter.isActive = true;
-  res.json({ suppliers: await Supplier.find(filter).sort({ isActive: -1, name: 1, _id: 1 }) });
+  res.json({
+    suppliers: await timber.listSuppliers(req.workspaceId, { activeOnly: req.query.active === "true" }),
+  });
 }
 
 async function get(req, res) {
-  const supplier = await Supplier.findOne(scopeFor(req));
+  const supplier = await timber.getSupplier(db, req.workspaceId, req.params.id);
   if (!supplier) fail(404, "Supplier not found");
   res.json(supplier);
 }
@@ -22,10 +22,7 @@ async function get(req, res) {
 async function create(req, res) {
   const { workspaceId } = req;
   const supplier = await writeTimber(req, "suppliers", async (context) => {
-    const created = await new Supplier({ ...req.body, workspaceId }).save({
-      session: context.session,
-    });
-    context.compensate(() => Supplier.deleteOne({ workspaceId, _id: created._id, balance: 0 }));
+    const created = await timber.insertSupplier(context.db, workspaceId, req.body);
     if (!created.openingBalance) return created;
     const updated = await postSupplierEntry(
       {
@@ -51,12 +48,10 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
-  const supplier = await writeTimber(req, "suppliers", async ({ session }) => {
-    const updated = await Supplier.findOneAndUpdate(
-      { ...scopeFor(req), isActive: true },
-      { $set: req.body },
-      { new: true, session }
-    );
+  const supplier = await writeTimber(req, "suppliers", async ({ db: tdb }) => {
+    const updated = await timber.updateSupplier(tdb, req.workspaceId, req.params.id, req.body, {
+      isActive: true,
+    });
     if (!updated) fail(404, "Active supplier not found");
     return updated;
   });
@@ -70,18 +65,17 @@ async function update(req, res) {
 }
 
 async function deactivate(req, res) {
-  const supplier = await writeTimber(req, "suppliers", async ({ session }) => {
-    const scope = scopeFor(req);
-    const current = await Supplier.findOne(scope).session(session);
+  const supplier = await writeTimber(req, "suppliers", async ({ db: tdb }) => {
+    const current = await timber.getSupplier(tdb, req.workspaceId, req.params.id, { lock: true });
     if (!current) fail(404, "Supplier not found");
     if (!current.isActive) fail(409, "Supplier already inactive");
     if (current.balance) fail(409, "Settle the supplier balance before deactivating");
-    return Supplier.findOneAndUpdate(
-      { ...scope, balance: 0, isActive: true },
-      {
-        $set: { isActive: false, deactivationReason: req.body.reason },
-      },
-      { new: true, session }
+    return timber.updateSupplier(
+      tdb,
+      req.workspaceId,
+      current._id,
+      { isActive: false, deactivationReason: req.body.reason },
+      { balance: 0, isActive: true }
     );
   });
   await audit.record(req, {
@@ -95,24 +89,22 @@ async function deactivate(req, res) {
 }
 
 async function ledger(req, res) {
-  const supplier = await Supplier.findOne(scopeFor(req));
+  const supplier = await timber.getSupplier(db, req.workspaceId, req.params.id);
   if (!supplier) fail(404, "Supplier not found");
   const page = Math.max(1, Math.min(10000, Number.parseInt(req.query.page, 10) || 1));
-  const filter = { workspaceId: req.workspaceId, supplierId: supplier._id };
-  const [entries, total] = await Promise.all([
-    Entry.find(filter)
-      .sort({ createdAt: -1, _id: -1 })
-      .skip((page - 1) * 30)
-      .limit(30),
-    Entry.countDocuments(filter),
-  ]);
+  const { entries, total } = await timber.listEntries(req.workspaceId, supplier._id, {
+    page,
+    limit: 30,
+  });
   res.json({ supplier, entries, page, total, pages: Math.max(1, Math.ceil(total / 30)) });
 }
 
 async function pay(req, res) {
   const { amount, paymentMode, advance, note } = req.body;
   const result = await writeTimber(req, "suppliers", async (context) => {
-    const supplier = await Supplier.findOne(scopeFor(req)).session(context.session);
+    const supplier = await timber.getSupplier(context.db, req.workspaceId, req.params.id, {
+      lock: true,
+    });
     if (!supplier) fail(404, "Supplier not found");
     if (!supplier.isActive && (advance || supplier.balance <= 0))
       fail(409, "Only outstanding dues can be paid for an inactive supplier");
@@ -142,10 +134,7 @@ async function pay(req, res) {
 }
 
 async function outstanding(req, res) {
-  const suppliers = await Supplier.find({ workspaceId: req.workspaceId, balance: { $ne: 0 } }).sort(
-    { balance: -1, name: 1 }
-  );
-  res.json({ suppliers });
+  res.json({ suppliers: await timber.outstandingSuppliers(req.workspaceId) });
 }
 
 module.exports = { list, get, create, update, deactivate, ledger, pay, outstanding };

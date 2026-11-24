@@ -1,40 +1,34 @@
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
 const { test } = require("node:test");
-const { request, signup, phaseWorkspace, account, sale } = require("./helpers/api");
+const {
+  request,
+  signup,
+  phaseWorkspace,
+  account,
+  sale,
+  insertSales,
+  UserAccount,
+} = require("./helpers/api");
 
-test("attendant daily totals isolate sales attributed to UUID and legacy account IDs", async () => {
-  const Transaction = require("../src/models/transaction.model");
-  const { Types } = require("mongoose");
+test("attendant daily totals isolate sales by the account that recorded them", async () => {
   const { getDailySummary } = require("../src/services/dashboard.service");
   const station = await phaseWorkspace("9000000063");
   const { workspaceId } = station.dealer;
-  const actor = randomUUID();
-  const legacyActor = new Types.ObjectId();
+  const actor = (await UserAccount.create({ phone: "9000000163", name: "A" }))._id;
+  const other = (await UserAccount.create({ phone: "9000000164", name: "B" }))._id;
   const createdAt = new Date("2026-11-23T09:00:00Z");
-  await Transaction.create([
-    { ...sale, workspaceId, createdBy: actor, createdAt, amount: 100 },
-    { ...sale, workspaceId, createdBy: randomUUID(), createdAt, amount: 200 },
+  await insertSales(workspaceId, [
+    { ...sale, createdBy: actor, createdAt, amount: 100 },
+    { ...sale, createdBy: other, createdAt, amount: 200 },
   ]);
-  await Transaction.collection.insertOne({
-    ...sale,
-    workspaceId,
-    createdBy: legacyActor,
-    createdAt,
-    status: "active",
-    amount: 300,
-  });
 
-  const [uuidTotal] = await getDailySummary(workspaceId, createdAt, actor);
-  assert.equal(uuidTotal.count, 1);
-  assert.equal(uuidTotal.totalAmount, 100);
-  const [legacyTotal] = await getDailySummary(workspaceId, createdAt, legacyActor.toString());
-  assert.equal(legacyTotal.count, 1);
-  assert.equal(legacyTotal.totalAmount, 300);
+  const [total] = await getDailySummary(workspaceId, createdAt, actor);
+  assert.equal(total.count, 1);
+  assert.equal(total.totalAmount, 100);
 });
 
 test("IST summaries include 00:30 and 23:50 on the same business date", async () => {
-  const Transaction = require("../src/models/transaction.model");
   const { getDailySummary } = require("../src/services/dashboard.service");
   const { istDateString } = require("../src/utils/datetime");
   const { data } = await signup(account("9000000010"));
@@ -42,12 +36,9 @@ test("IST summaries include 00:30 and 23:50 on the same business date", async ()
   const morning = new Date("2026-11-22T19:00:00Z");
   const evening = new Date("2026-11-23T18:20:00Z");
   const nextMorning = new Date("2026-11-23T19:00:00Z");
-  await Transaction.create(
-    [morning, evening, nextMorning].map((createdAt) => ({
-      ...sale,
-      workspaceId,
-      createdAt,
-    }))
+  await insertSales(
+    workspaceId,
+    [morning, evening, nextMorning].map((createdAt) => ({ ...sale, createdAt }))
   );
   assert.equal(istDateString(morning), "2026-11-23");
   assert.equal(istDateString(evening), "2026-11-23");
@@ -63,10 +54,9 @@ test("IST summaries include 00:30 and 23:50 on the same business date", async ()
 test("sales reports use inclusive IST dates, exclude voids, isolate tenants, and escape CSV", async () => {
   const own = await phaseWorkspace("9000000026");
   const other = await phaseWorkspace("9000000027");
-  const Transaction = require("../src/models/transaction.model");
-  const sample = (attributes) => ({ ...sale, workspaceId: own.dealer.workspaceId, ...attributes });
+  const sample = (attributes) => ({ ...sale, ...attributes });
   const itemType = 'Timber, "A"\nGrade';
-  await Transaction.create([
+  await insertSales(own.dealer.workspaceId, [
     sample({ createdAt: new Date("2026-11-22T18:29:59.999Z"), amount: 9999 }),
     sample({ createdAt: new Date("2026-11-22T18:30:00.000Z"), quantity: 1, amount: 0.1, itemType }),
     sample({
@@ -82,11 +72,9 @@ test("sales reports use inclusive IST dates, exclude voids, isolate tenants, and
       itemType: "=1+1",
     }),
     sample({ createdAt: new Date("2026-11-23T18:30:00.000Z"), amount: 9999, status: "voided" }),
-    sample({
-      createdAt: new Date("2026-11-23T09:00:00.000Z"),
-      amount: 9999,
-      workspaceId: other.dealer.workspaceId,
-    }),
+  ]);
+  await insertSales(other.dealer.workspaceId, [
+    sample({ createdAt: new Date("2026-11-23T09:00:00.000Z"), amount: 9999 }),
   ]);
   const path = "/api/reports/sales?from=2026-11-23&to=2026-11-24";
   const { token } = own;

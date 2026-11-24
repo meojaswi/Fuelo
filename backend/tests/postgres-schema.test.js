@@ -247,7 +247,7 @@ if (!process.env.DATABASE_URL_TEST) {
       `INSERT INTO transactions
          (workspace_id, customer_name, customer_phone, item_type, quantity, unit, amount, payment_mode)
        VALUES ($1, 'Test', '9000000099', 'Diesel', $2, 'litres', $3, 'cash')
-       RETURNING quantity, amount`,
+       RETURNING quantity::text, amount::text`,
       [workspaceId, "1.2345", "1000000000000"]
     );
     assert.deepEqual(rows[0], { quantity: "1.2345", amount: "1000000000000.00" });

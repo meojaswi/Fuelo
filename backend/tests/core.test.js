@@ -2,7 +2,7 @@
 // these vars. CI has no backend/.env, so set test-only placeholders first.
 // They never connect to a database. See CHECKS.md.
 process.env.NODE_ENV = "test";
-process.env.MONGO_URI ??= "mongodb://127.0.0.1:27017/fuelo-unit-tests";
+process.env.DATABASE_URL ??= "postgresql://unit:unit@127.0.0.1:5432/unit-tests";
 process.env.JWT_SECRET ??= "fuelo-unit-test-secret-only";
 
 const assert = require("node:assert/strict");

@@ -63,17 +63,18 @@ async function invite(req, res) {
       },
       db
     );
+    await enqueue(
+      {
+        workspaceId,
+        channel: "whatsapp",
+        toPhone: phone.length === 10 ? "+91" + phone : phone,
+        ...buildInvite(workspace, new URL("/invite/" + raw, env.publicAppUrl).href, raw),
+        sensitive: true,
+        deliveryExpiresAt: expiresAt,
+      },
+      { db }
+    );
     return { result: present(member, user, req.user.userId), workspace };
-  });
-  // TEMP(pg-cutover): the message queue is still MongoDB-backed, so it cannot join the
-  // PostgreSQL transaction. Remove this note when messageQueue.service is ported.
-  await enqueue({
-    workspaceId,
-    channel: "whatsapp",
-    toPhone: phone.length === 10 ? "+91" + phone : phone,
-    ...buildInvite(workspace, new URL("/invite/" + raw, env.publicAppUrl).href, raw),
-    sensitive: true,
-    deliveryExpiresAt: expiresAt,
   });
   await audit.record(req, {
     action: "member.invite",

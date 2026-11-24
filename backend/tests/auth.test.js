@@ -6,19 +6,19 @@ const {
   phaseWorkspace,
   account,
   password,
-  Dealer,
+  rows,
   UserAccount,
   hashPassword,
 } = require("./helpers/api");
 const { createHmac } = require("node:crypto");
 const { query } = require("../src/config/postgres");
-const mongoAuthContract = require("./contract/auth.json");
+const authContract = require("./contract/auth.json");
 
 
 function assertContract(method, route, response) {
   const { data, status } = response;
   const shape = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value]));
-  const expected = mongoAuthContract.find(
+  const expected = authContract.find(
     (entry) => entry.method === method && entry.route === route && entry.status === status
   );
   assert.deepEqual({ method, route, status, shape }, expected);
@@ -120,7 +120,6 @@ test("refresh rotation, reuse revocation and logout-all invalidate sessions", as
 test("OTP recovery is generic, rate-limited per challenge, and resets the password once", async () => {
   const phone = "9000000029";
   const user = await phaseWorkspace(phone);
-  const jobs = require("../src/models/messageJob.model");
   const ask = (candidate) =>
     request("/api/auth/otp/request", { method: "POST", body: { phone: candidate } });
   const response = await ask(phone);
@@ -128,8 +127,11 @@ test("OTP recovery is generic, rate-limited per challenge, and resets the passwo
   assertContract("POST", "/api/auth/otp/request", response);
   assert.deepEqual(response.data, (await ask("9000000999")).data);
   await ask(phone);
-  assert.equal(await jobs.countDocuments({ workspaceId: user.dealer.workspaceId }), 1);
-  const job = await jobs.findOne({ workspaceId: user.dealer.workspaceId });
+  const queued = await rows("SELECT body FROM message_jobs WHERE workspace_id = $1", [
+    user.dealer.workspaceId,
+  ]);
+  assert.equal(queued.length, 1);
+  const [job] = queued;
   const code = job.body.match(/\b\d{6}\b/)[0];
   const verify = (candidate) =>
     request("/api/auth/otp/verify", {
@@ -151,8 +153,9 @@ test("an expired recovery code is rejected before scheduled cleanup", async () =
   const user = await phaseWorkspace(phone);
   const issue = await request("/api/auth/otp/request", { method: "POST", body: { phone } });
   assert.equal(issue.status, 202);
-  const jobs = require("../src/models/messageJob.model");
-  const job = await jobs.findOne({ workspaceId: user.dealer.workspaceId });
+  const [job] = await rows("SELECT body FROM message_jobs WHERE workspace_id = $1", [
+    user.dealer.workspaceId,
+  ]);
   const code = job.body.match(/\b\d{6}\b/)[0];
   const phoneHash = createHmac("sha256", process.env.JWT_SECRET)
     .update("otp-phone:" + phone)
@@ -177,13 +180,14 @@ test("session flags and receipt language follow the workspace", async () => {
     (await request("/api/auth/session", { token })).data.dealer.verticalFeatures.shifts,
     true
   );
-  const Job = require("../src/models/messageJob.model");
+  const receiptBody = async (transactionId) =>
+    (await rows("SELECT body FROM message_jobs WHERE transaction_id = $1", [transactionId]))[0].body;
   const send = () =>
     request("/api/transactions", { token, method: "POST", body: { ...sale, paymentMode: "cash" } });
   const hi = await send();
   assert.equal(hi.status, 201);
   assert.match(
-    (await Job.findOne({ workspaceId: dealer.workspaceId, transactionId: hi.data._id })).body,
+    await receiptBody(hi.data._id),
     /aapka/
   );
   assert.equal(
@@ -192,7 +196,7 @@ test("session flags and receipt language follow the workspace", async () => {
   );
   const en = await send();
   assert.match(
-    (await Job.findOne({ workspaceId: dealer.workspaceId, transactionId: en.data._id })).body,
+    await receiptBody(en.data._id),
     /here is your/
   );
 });

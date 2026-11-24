@@ -249,11 +249,14 @@ test("registered timber invoices number twenty concurrent sales and a credit not
   const quote = await api("/timber/sale-quote", "POST", { ...input, placeOfSupply: "29" });
   assert.equal(quote.status, 200, JSON.stringify(quote.data));
   assert.deepEqual([quote.data.tax.cgst, quote.data.tax.igst, quote.data.amount], [0, 36.52, 247]);
-  const Transaction = require("../src/models/transaction.model");
-  const save = t.mock.method(Transaction.prototype, "save", async function () {
-    assert.match(this.invoiceNumber, /\/0001$/);
-    throw new Error("Simulated invoice write failure");
-  });
+  const save = t.mock.method(
+    require("../src/repositories/sales"),
+    "insertTransaction",
+    async (_db, _workspaceId, row) => {
+      assert.match(row.invoiceNumber, /\/0001$/);
+      throw new Error("Simulated invoice write failure");
+    }
+  );
   assert.equal((await api("/transactions", "POST", input)).status, 500);
   save.mock.restore();
   const issued = await Promise.all(
@@ -401,15 +404,16 @@ test("timber reports use purchase weights and FIFO balances and exclude other wo
   const payableAge = (await api(paths + "payables-aging")).data.rows[0];
   assert.deepEqual([payableAge.days0to30, payableAge.days31to60], [280, 80]);
   assert.equal((await api("/customers/" + sale.data.customerId + "/reminder", "POST")).status, 202);
-  const Job = require("../src/models/messageJob.model");
-  assert.equal(
-    await Job.countDocuments({ workspaceId: dealer.workspaceId, body: /lakdi mil gayi/ }),
-    2
-  );
-  assert.equal(
-    await Job.countDocuments({ workspaceId: dealer.workspaceId, body: /8 ft.*6 in.*2 in/ }),
-    1
-  );
+  const { rows } = require("./helpers/api");
+  const matching = async (pattern) =>
+    (
+      await rows(
+        "SELECT count(*)::int AS total FROM message_jobs WHERE workspace_id = $1 AND body ~ $2",
+        [dealer.workspaceId, pattern]
+      )
+    )[0].total;
+  assert.equal(await matching("lakdi mil gayi"), 2);
+  assert.equal(await matching("8 ft.*6 in.*2 in"), 1);
   const foreign = (await timberWorkspace("9000000091")).api;
   for (const [kind, window] of [
     ["stock", ""],

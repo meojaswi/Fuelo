@@ -2,7 +2,7 @@
 
 The entry point for understanding the app. It describes what happens, from a visitor opening the site to a nightly summary landing on WhatsApp. For testing, see [QA.md](QA.md). For backend setup, see [backend/README.md](backend/README.md).
 
-The PostgreSQL migration branch uses PostgreSQL for password recovery challenges, their expiry cleanup, and the daily scheduler lock. The scheduler uses the unique job name and IST run date to let one instance acquire each daily run. The nightly summary, message worker, and remaining application data still use the MongoDB paths below. The target schema and cutover status are tracked in [POSTGRES_PLAN.md](docs/POSTGRES_PLAN.md).
+All application data lives in PostgreSQL. The target schema is described in [POSTGRES_PLAN.md](docs/POSTGRES_PLAN.md).
 
 > Status: this describes Phases 0 through 3b as built. Section 16 lists planned work. Phase 2 was verified with local backend tests and a Chrome smoke test. Phases 3a and 3b passed local backend tests in both MongoDB modes and Chrome workflow checks. Live Twilio delivery, live Razorpay Checkout and hosted CI for this working tree remain unverified. Use QA.md to track staging checks.
 
@@ -13,9 +13,9 @@ The PostgreSQL migration branch uses PostgreSQL for password recovery challenges
 Fuelo is a multi-tenant SaaS for Indian small businesses (petrol pumps, timber, later construction and real estate). Staff record sales, track credit (udhaar) and stock, and customers get receipts on WhatsApp.
 
 ```
- Browser (React + Vite)                      Backend (Express + Mongoose)              External
+ Browser (React + Vite)                      Backend (Express + pg)              External
  ─────────────────────                      ─────────────────────────                ────────
- Login / Signup / Pricing      ── HTTPS ──►  /api/*  (auth, transactions,   ──────►  MongoDB Atlas
+ Login / Signup / Pricing      ── HTTPS ──►  /api/*  (auth, transactions,   ──────►  PostgreSQL
  App shell + pages                           customers, inventory, reports,           (replica set)
  Public receipt page                         members, billing, audit …)
                                                     │
@@ -43,7 +43,7 @@ One person can belong to several workspaces. Each login/session is **for one wor
 
 ## 3. Startup (backend)
 
-1. `backend/src/index.js` loads config (`config/env.js`), connects MongoDB, builds the app from `src/app.js`, and starts the scheduler.
+1. `backend/src/index.js` loads config (`config/env.js`), checks PostgreSQL, builds the app from `src/app.js`, and starts the scheduler.
 2. `src/app.js` wires middleware in order: helmet, CORS allowlist, request logging, rate limiters, JSON body parser (keeps the raw body for the Razorpay signature), then routers under `/api/*`, then the error handler.
 3. Scheduler (`services/scheduler.service.js`):
    - **Every 30 seconds:** drain pending WhatsApp/SMS jobs.
@@ -108,7 +108,7 @@ POST /api/transactions
 Response 201 → UI shows the sale; optional "share receipt" / "download PDF"
 ```
 
-Where supported, stock, credit, sale and queue writes run inside a MongoDB transaction; on standalone Mongo they run as ordered writes with compensation (use a replica set in production).
+Stock, credit, sale and queue writes run inside one PostgreSQL transaction after locking the workspace row.
 
 ### Receipt sharing
 - `POST /api/transactions/:id/share-link` creates a token link (valid 48 hours by default; can be opened many times, since link-preview bots must not burn it).
@@ -258,7 +258,7 @@ The frontend opens an upgrade modal for a `402` with `upgradeRequired: true`. Ow
 
 ### Backend test suites
 
-Tests under `backend/tests/` are split by auth, stock, credit, reports, billing, members, pump operations and pure logic. They share an isolated HTTP and MongoDB fixture. `npm test` uses a replica set by default, and `FUELO_TEST_STANDALONE=1` exercises ordered compensation. `npm run test:coverage` adds Node's coverage report.
+Tests under `backend/tests/` are split by auth, stock, credit, reports, billing, members, pump operations and pure logic. They share an isolated HTTP and PostgreSQL schema fixture (`DATABASE_URL_TEST`). `npm run test:coverage` adds Node's coverage report.
 
 ### Pump pack foundation
 
@@ -321,8 +321,8 @@ Timber navigation uses the workspace flags and role permissions. Timber inventor
 
 ## 17. Deployment checklist (summary)
 
-1. MongoDB Atlas (replica set), database user, IP access list.
-2. Configure `MONGO_URI`, `JWT_SECRET` (32+ characters), `CORS_ORIGINS`, `PUBLIC_APP_URL`, Twilio, Razorpay and `RAZORPAY_PLAN_*`. Set `TRUST_PROXY_HOPS` to match the actual proxy path.
+1. Managed PostgreSQL 16 database, user and network access.
+2. Configure `DATABASE_URL`, `JWT_SECRET` (32+ characters), `CORS_ORIGINS`, `PUBLIC_APP_URL`, Twilio, Razorpay and `RAZORPAY_PLAN_*`. Set `TRUST_PROXY_HOPS` to match the actual proxy path.
 3. From `backend/`, run `node scripts/migrateToMemberships.js --dry-run`. Review the counts before applying the migration with `node scripts/migrateToMemberships.js`.
 4. Seed test-mode plans with `node scripts/seedPlans.js`, including the updated Growth and Business pump and timber pack snapshots. Configure the optional Hinglish Twilio Content SIDs listed in [QA.md](QA.md) for staging delivery checks.
 5. Configure `VITE_API_BASE_URL=https://<backend>/api` for the frontend and send signed Razorpay subscription events to `https://<backend>/api/billing/webhook`.

@@ -1,29 +1,10 @@
-const Inventory = require("../models/inventory.model");
-const StockMovement = require("../models/stockMovement.model");
-const Tank = require("../models/tank.model");
+const sales = require("../repositories/sales");
+const pump = require("../repositories/pump");
 const { roundMoney: litres } = require("../utils/money");
 const { fail } = require("./atomic.service");
 
-async function recordMovement(data, { session, compensate }) {
-  const movement = await new StockMovement(data).save({ session });
-  compensate(() => StockMovement.deleteOne({ workspaceId: data.workspaceId, _id: movement._id }));
-  return movement;
-}
-
-// Decimal arithmetic preserves fractional stock on inventory without tanks.
-function stockDelta(delta, piecesDelta) {
-  return [
-    {
-      $set: {
-        ...(piecesDelta !== undefined && {
-          currentPieces: { $add: [{ $ifNull: ["$currentPieces", 0] }, piecesDelta] },
-        }),
-        currentStock: {
-          $toDouble: { $add: [{ $toDecimal: "$currentStock" }, { $toDecimal: delta.toString() }] },
-        },
-      },
-    },
-  ];
+function recordMovement(data, { db }) {
+  return sales.insertMovement(db, data.workspaceId, data);
 }
 
 function allocate(tanks, delta, { allowNegative, allowOverflow }) {
@@ -41,27 +22,21 @@ function allocate(tanks, delta, { allowNegative, allowOverflow }) {
     fail(409, sign < 0 ? "Insufficient stock in the tanks" : "Stock would exceed tank capacity");
   }
   const tankId = tanks.at(-1)._id;
-  const last = changes.find((change) => String(change.tankId) === String(tankId));
+  const last = changes.find((change) => change.tankId === tankId);
   if (last) last.delta = litres(last.delta + sign * remaining);
   else changes.push({ tankId, delta: sign * remaining });
   return changes;
 }
 
-async function updateTank(tank, delta, { allowNegative, allowOverflow }, { session, compensate }) {
+async function updateTank(tank, delta, { allowNegative, allowOverflow }, { db }) {
   const bookStock = litres(tank.bookStock + delta);
   if (bookStock < 0 && !allowNegative) fail(409, "Insufficient stock in the selected tank");
   if (bookStock > tank.capacityLitres && !allowOverflow && delta > 0)
     fail(409, "Stock would exceed tank capacity");
-  const scope = { workspaceId: tank.workspaceId, _id: tank._id };
-  const result = await Tank.updateOne(
-    { ...scope, bookStock: tank.bookStock },
-    { $set: { bookStock } },
-    { session }
-  );
-  if (!result.matchedCount) fail(409, "Tank stock changed. Refresh and try again.");
-  compensate(() =>
-    Tank.updateOne({ ...scope, bookStock }, { $set: { bookStock: tank.bookStock } })
-  );
+  const result = await pump.updateTank(db, tank.workspaceId, tank._id, { bookStock }, {
+    bookStock: tank.bookStock,
+  });
+  if (!result) fail(409, "Tank stock changed. Refresh and try again.");
   return { tankId: tank._id, delta, balanceAfter: bookStock };
 }
 
@@ -80,10 +55,11 @@ async function initializeTank(tank, openingStock, inventory, createdBy, context)
     },
     context
   );
-  tank.bookStock = change.balanceAfter;
-  return tank;
+  return { ...tank, bookStock: change.balanceAfter };
 }
 
+// Changes one item's stock (and its tanks') and records the movement. Returns the updated item
+// with `tankChanges` and `movementId`, or null when an untracked item does not exist.
 async function changeStock(options, context) {
   const {
     filter,
@@ -96,14 +72,9 @@ async function changeStock(options, context) {
     createdBy,
     allowNegative,
   } = options;
-  const { session, compensate } = context;
-  const tanks = await Tank.find({
-    workspaceId: filter.workspaceId,
-    itemType: filter.itemType,
-    isActive: true,
-  })
-    .sort({ _id: 1 })
-    .session(session);
+  const { db } = context;
+  const { workspaceId, itemType, _id: itemId } = filter;
+  const tanks = await pump.activeTanksForItem(db, workspaceId, itemType);
   const tracked = tanks.length > 0;
   const delta = tracked ? litres(options.delta) : options.delta;
   if (tracked && options.delta && !delta) fail(400, "Tank quantities must be at least 0.01 litres");
@@ -116,39 +87,30 @@ async function changeStock(options, context) {
     fail(409, "Tank adjustments do not match the inventory change");
   }
 
-  const condition = { ...filter };
-  if (delta < 0 && !allowNegative) condition.currentStock = { $gte: -delta };
-  if (piecesDelta < 0 && !allowNegative) condition.currentPieces = { $gte: -piecesDelta };
-  const item = await Inventory.findOneAndUpdate(condition, stockDelta(delta, piecesDelta), {
-    new: true,
-    session,
-  });
+  const item = await sales.adjustInventory(
+    db,
+    { workspaceId, itemType, id: itemId },
+    { delta, piecesDelta, allowNegative }
+  );
   if (!item) {
     if (reason === "void" || requested.length)
       fail(409, "Stock is unavailable for this adjustment");
-    if (await Inventory.exists(filter).session(session))
-      fail(409, `Insufficient stock for ${filter.itemType}`);
+    if (await sales.inventoryExists(db, workspaceId, itemType, itemId))
+      fail(409, `Insufficient stock for ${itemType}`);
     return null;
   }
 
-  const scope = { workspaceId: item.workspaceId, _id: item._id };
-  compensate(() =>
-    Inventory.updateOne(
-      scope,
-      stockDelta(-delta, piecesDelta === undefined ? undefined : -piecesDelta)
-    )
-  );
   const tankChanges = [];
   for (const change of requested) {
-    const tank = tanks.find((candidate) => String(candidate._id) === String(change.tankId));
+    const tank = tanks.find((candidate) => candidate._id === change.tankId);
     if (!tank) fail(409, "The original tank is unavailable");
     tankChanges.push(await updateTank(tank, litres(change.delta), options, context));
   }
-  item.$locals.tankChanges = tankChanges;
+  let movementId;
   if (delta || piecesDelta || tankChanges.length) {
     const movement = await recordMovement(
       {
-        workspaceId: item.workspaceId,
+        workspaceId,
         itemType: item.itemType,
         delta,
         reason,
@@ -164,9 +126,16 @@ async function changeStock(options, context) {
       },
       context
     );
-    item.$locals.movementId = movement._id;
+    movementId = movement._id;
   }
-  return item;
+  // Hidden from JSON so the item can be returned to clients as it is.
+  return Object.defineProperties(
+    { ...item },
+    {
+      tankChanges: { value: tankChanges, enumerable: false },
+      movementId: { value: movementId, enumerable: false },
+    }
+  );
 }
 
 module.exports = { changeStock, recordMovement, initializeTank };

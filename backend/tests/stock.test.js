@@ -1,6 +1,8 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { request, signup, phaseWorkspace, account, sale, Link } = require("./helpers/api");
+const { request, signup, phaseWorkspace, account, sale, rows } = require("./helpers/api");
+
+const count = async (sql, params) => (await rows(sql, params))[0].total;
 
 test("workspace isolation, dashboard, PDF, and repeatable public receipts", async () => {
   const { data: a } = await signup(account("9000000004"));
@@ -39,7 +41,7 @@ test("workspace isolation, dashboard, PDF, and repeatable public receipts", asyn
   assert.equal(url, `/share/${token}`);
   const receiptPath = `/api/public/receipts/${token}`;
   const first = await request(receiptPath);
-  const firstViewed = await Link.findOne({ workspaceId: b.dealer.workspaceId, token });
+  const [firstViewed] = await rows("SELECT first_viewed_at FROM links WHERE token = $1", [token]);
   const more = await Promise.all([request(receiptPath), request(`/links/${token}`)]);
   for (const response of [first, ...more]) {
     assert.equal(response.status, 200);
@@ -47,26 +49,29 @@ test("workspace isolation, dashboard, PDF, and repeatable public receipts", asyn
     assert.equal(response.data.transaction._id, created.data._id);
   }
 
-  const filter = { workspaceId: b.dealer.workspaceId, token };
-  const link = await Link.findOne(filter);
-  assert.equal(link.viewCount, 3);
-  assert.ok(firstViewed.firstViewedAt);
-  assert.deepEqual(link.firstViewedAt, firstViewed.firstViewedAt);
-  await Link.updateOne(filter, { $set: { expiresAt: new Date(0) } });
+  const views = () =>
+    rows("SELECT view_count, first_viewed_at FROM links WHERE token = $1", [token]);
+  const [link] = await views();
+  assert.equal(Number(link.view_count), 3);
+  assert.ok(firstViewed.first_viewed_at);
+  assert.deepEqual(link.first_viewed_at, firstViewed.first_viewed_at);
+  await rows("UPDATE links SET expires_at = $2 WHERE token = $1", [token, new Date(0)]);
   const expired = await request(receiptPath);
   assert.equal(expired.status, 410);
   assert.equal(expired.data.code, "EXPIRED");
-  assert.equal((await Link.findOne(filter)).viewCount, 3);
+  assert.equal(Number((await views())[0].view_count), 3);
 });
 
 test("tracked sales cannot oversell; void restores stock once and stock changes are logged", async () => {
   const { token, dealer, account: actor } = await phaseWorkspace("9000000020");
   const stranger = await phaseWorkspace("9000000021");
-  const movement = require("../src/models/stockMovement.model");
-  const jobs = require("../src/models/messageJob.model");
-  const DailySummary = require("../src/models/dailySummary.model");
   const { istDateString } = require("../src/utils/datetime");
-  const scope = { workspaceId: dealer.workspaceId };
+  const workspaceId = dealer.workspaceId;
+  const movements = (reason) =>
+    count(
+      "SELECT count(*)::int AS total FROM stock_movements WHERE workspace_id = $1 AND reason = $2",
+      [workspaceId, reason]
+    );
   const seeded = await request("/api/inventory", {
     method: "POST",
     token,
@@ -101,12 +106,20 @@ test("tracked sales cannot oversell; void restores stock once and stock changes 
     request(voidPath, { method: "POST", token: bearer, body: { reason } });
   assert.equal((await voidRequest(stranger.token)).status, 404);
   assert.equal((await voidRequest(token, "x")).status, 400);
-  await DailySummary.create({ ...scope, date: istDateString(), grandTotalAmount: 500 });
+  await rows(
+    "INSERT INTO daily_summaries (workspace_id, date, grand_total_amount) VALUES ($1, $2, 500)",
+    [workspaceId, istDateString()]
+  );
   const voided = await Promise.all([voidRequest(token), voidRequest(token)]);
   assert.deepEqual(voided.map((r) => r.status).sort(), [200, 409]);
   assert.equal(voided.find((r) => r.status === 200).data.voidedBy, actor.id);
   assert.equal((await request("/api/inventory", { token })).data[0].currentStock, 1);
-  assert.equal(await jobs.countDocuments(scope), 5);
+  assert.equal(
+    await count("SELECT count(*)::int AS total FROM message_jobs WHERE workspace_id = $1", [
+      workspaceId,
+    ]),
+    5
+  );
   assert.equal((await request("/api/dashboard/daily-summary", { token })).data.sales, 400);
   assert.equal(
     (await request(`/api/summary?date=${istDateString()}`, { token })).data.grandTotalAmount,
@@ -123,11 +136,16 @@ test("tracked sales cannot oversell; void restores stock once and stock changes 
     body: { currentStock: 3 },
   });
   assert.equal(adjusted.status, 200);
-  assert.equal(await movement.countDocuments({ ...scope, reason: "sale" }), 5);
-  assert.equal(await movement.countDocuments({ ...scope, reason: "void" }), 1);
-  assert.equal(await movement.countDocuments({ ...scope, reason: "manual_adjust" }), 2);
+  assert.equal(await movements("sale"), 5);
+  assert.equal(await movements("void"), 1);
+  assert.equal(await movements("manual_adjust"), 2);
   assert.equal(
-    (await movement.findOne({ ...scope, reason: "manual_adjust", delta: 2 })).balanceAfter,
+    (
+      await rows(
+        "SELECT balance_after FROM stock_movements WHERE workspace_id = $1 AND reason = 'manual_adjust' AND delta = 2",
+        [workspaceId]
+      )
+    )[0].balance_after,
     3
   );
 
@@ -146,7 +164,6 @@ test("tracked sales cannot oversell; void restores stock once and stock changes 
 
 test("list price snapshots, amount warnings and price history preserve discounts and rounding", async () => {
   const { token, dealer, account: actor } = await phaseWorkspace("9000000022");
-  const PriceHistory = require("../src/models/priceHistory.model");
   const body = { itemType: "Diesel", currentStock: 5, unit: "litres", pricePerUnit: 100.125 };
   const seed = await request("/api/inventory", { method: "POST", token, body });
   assert.equal(seed.data.pricePerUnit, 100.13);
@@ -158,7 +175,15 @@ test("list price snapshots, amount warnings and price history preserve discounts
     });
   assert.equal((await patch(102.105)).data.pricePerUnit, 102.11);
   assert.equal((await patch(102.11)).status, 200);
-  const history = await PriceHistory.find({ workspaceId: dealer.workspaceId, itemType: "Diesel" });
+  const history = (
+    await rows("SELECT * FROM price_history WHERE workspace_id = $1 AND item_type = 'Diesel'", [
+      dealer.workspaceId,
+    ])
+  ).map((row) => ({
+    oldPrice: row.old_price,
+    newPrice: row.new_price,
+    changedBy: row.changed_by,
+  }));
   assert.equal(history.length, 1);
   assert.equal(history[0].oldPrice, 100.13);
   assert.equal(history[0].newPrice, 102.11);

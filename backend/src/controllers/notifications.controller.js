@@ -1,45 +1,40 @@
-const Notification = require("../models/notification.model");
-const MessageJob = require("../models/messageJob.model");
+const operations = require("../repositories/operations");
+const { query } = require("../config/postgres");
+
+const db = { query };
 
 async function list(req, res) {
   const { status, page = 1, limit = 20 } = req.query;
-  const filter = { workspaceId: req.workspaceId };
-  if (status) filter.status = status;
-
-  const notifications = await Notification.find(filter)
-    .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(Number(limit));
-
-  const total = await Notification.countDocuments(filter);
+  const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
+  const { notifications, total } = await operations.listNotifications(
+    req.workspaceId,
+    { status },
+    { page: pageNumber, limit: pageSize }
+  );
   res.json({ notifications, total, page: Number(page), limit: Number(limit) });
 }
 
 // Re-queues a failed job by resetting it to pending — the drain tick
 // picks it back up. Doesn't call Twilio directly, keeps the same queue path.
 async function retry(req, res) {
-  const notification = await Notification.findOne({
-    _id: req.params.id,
-    workspaceId: req.workspaceId,
-  });
+  const notification = await operations.getNotification(db, req.workspaceId, req.params.id);
   if (!notification) return res.status(404).json({ error: "Notification not found" });
   if (notification.status !== "failed") {
     return res.status(400).json({ error: "Only failed notifications can be retried" });
   }
 
-  const job = await MessageJob.findOne({
-    _id: notification.messageJobId,
-    workspaceId: req.workspaceId,
-  });
+  const job = await operations.getMessageJob(db, req.workspaceId, notification.messageJobId);
   if (!job) return res.status(404).json({ error: "Underlying message job not found" });
 
   if (job.sensitive)
     return res.status(409).json({ error: "Send a new invite or recovery code instead" });
 
-  job.status = "pending";
-  job.attempts = 0;
-  job.lastError = undefined;
-  await job.save();
+  await operations.updateMessageJob(db, req.workspaceId, job._id, {
+    status: "pending",
+    attempts: 0,
+    lastError: null,
+  });
 
   res.json({ ok: true, message: "Job re-queued for retry" });
 }

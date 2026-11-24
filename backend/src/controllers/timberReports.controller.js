@@ -1,10 +1,5 @@
-const Transaction = require("../models/transaction.model");
-const Inventory = require("../models/inventory.model");
-const Supplier = require("../models/supplier.model");
-const Customer = require("../models/customer.model");
-const Purchase = require("../models/purchase.model");
-const Ledger = require("../models/ledgerEntry.model");
-const SupplierLedger = require("../models/supplierLedgerEntry.model");
+const salesRepo = require("../repositories/sales");
+const timber = require("../repositories/timber");
 const { unpaidCharges } = require("../services/fleetCredit.service");
 const { assertCan } = require("../services/entitlements.service");
 const { roundMoney } = require("../utils/money");
@@ -15,9 +10,12 @@ const { fail } = require("../services/atomic.service");
 const { range } = require("./gstReports.controller");
 
 async function stock({ workspaceId }) {
-  const items = await Inventory.find({ workspaceId, pricingUnit: { $type: "string" } })
-    .sort({ species: 1, grade: 1, itemType: 1 })
-    .lean();
+  const items = (await salesRepo.listInventory(workspaceId, { timberOnly: true })).sort(
+    (a, b) =>
+      (a.species ?? "").localeCompare(b.species ?? "") ||
+      (a.grade ?? "").localeCompare(b.grade ?? "") ||
+      a.itemType.localeCompare(b.itemType)
+  );
   return items.map((row) => ({
     item: row.itemType,
     species: row.species,
@@ -30,18 +28,8 @@ async function stock({ workspaceId }) {
   }));
 }
 
-async function salesLines({ workspaceId, query }) {
-  const sales = await Transaction.find({
-    workspaceId,
-    status: "active",
-    "lineItems.0": { $exists: true },
-    createdAt: range(query),
-  })
-    .select("lineItems invoice.tax.rows")
-    .lean();
-  return sales.flatMap(
-    (sale) => sale.invoice?.tax?.rows.filter((row) => row.kind === "item") ?? sale.lineItems
-  );
+function salesLines({ workspaceId, query }) {
+  return salesRepo.timberSaleLines(workspaceId, range(query));
 }
 
 function groupedSales(lines, field) {
@@ -68,27 +56,22 @@ async function sales(req) {
 }
 
 async function aging({ workspaceId }, suppliers) {
-  const [model, ledger, party, balance, reference] = suppliers
-    ? [Supplier, SupplierLedger, "supplierId", "balance", "purchaseId"]
-    : [Customer, Ledger, "customerId", "creditBalance", "transactionId"];
-  const parties = await model
-    .find({ workspaceId, [balance]: { $ne: 0 } })
-    .sort({ name: 1, _id: 1 })
-    .lean();
-  const entries = await ledger
-    .find({ workspaceId, [party]: { $in: parties.map((row) => row._id) } })
-    .sort({ createdAt: 1, _id: 1 })
-    .lean();
+  const [party, reference] = suppliers ? ["supplierId", "purchaseId"] : ["customerId", "transactionId"];
+  const parties = await timber.partiesWithBalance(workspaceId, suppliers ? "suppliers" : "customers");
+  const ids = parties.map((row) => row.id);
+  const entries = suppliers
+    ? await timber.entriesForAging(workspaceId, ids)
+    : await salesRepo.ledgerForAging(workspaceId, ids);
   const byParty = new Map();
   for (const entry of entries) {
-    const key = String(entry[party]);
+    const key = entry[party];
     if (!byParty.has(key)) byParty.set(key, []);
     byParty.get(key).push(entry.effectiveAt ? { ...entry, createdAt: entry.effectiveAt } : entry);
   }
   const today = +istDayBoundsUTC(new Date()).startUTC;
   return parties.map((row) => {
     const buckets = { days0to30: 0, days31to60: 0, days61to90: 0, days91Plus: 0 };
-    const entries = byParty.get(String(row._id)) ?? [];
+    const entries = byParty.get(row.id) ?? [];
     if (suppliers) entries.sort((a, b) => +a.createdAt - +b.createdAt);
     for (const unpaid of unpaidCharges(entries, reference)) {
       const days = (today - +istDayBoundsUTC(unpaid.date).startUTC) / 86400000;
@@ -105,8 +88,8 @@ async function aging({ workspaceId }, suppliers) {
     for (const key of Object.keys(buckets)) buckets[key] /= 100;
     return {
       name: row.name,
-      balance: row[balance],
-      advance: Math.max(0, -row[balance]),
+      balance: row.balance,
+      advance: Math.max(0, -row.balance),
       ...buckets,
     };
   });
@@ -115,13 +98,7 @@ async function aging({ workspaceId }, suppliers) {
 async function profit(req) {
   const [lines, purchases] = await Promise.all([
     salesLines(req),
-    Purchase.find({
-      workspaceId: req.workspaceId,
-      status: "active",
-      invoiceDate: { $lte: req.query.to },
-    })
-      .select("lineItems")
-      .lean(),
+    timber.activePurchaseLines(req.workspaceId, req.query.to),
   ]);
   const costs = new Map();
   for (const { lineItems } of purchases) {

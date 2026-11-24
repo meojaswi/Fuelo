@@ -1,4 +1,5 @@
-const Transaction = require("../models/transaction.model");
+const { randomUUID } = require("node:crypto");
+const sales = require("../repositories/sales");
 const { assertCan } = require("./entitlements.service");
 const { checkTimber } = require("../middleware/timber.middleware");
 const { fail } = require("./atomic.service");
@@ -12,23 +13,21 @@ const { MAX_MONEY, roundMoney } = require("../utils/money");
 async function createTimberSale(req, workspace, input, override, context) {
   checkTimber(workspace, "dimensions");
   const { workspaceId } = req;
+  const { db } = context;
   const actor = req.user.userId;
-  const options = { workspace, session: context.session };
-  const lineItems = await calculateLines(workspaceId, input.lineItems, context.session);
-  const { amount, ...snapshot } = await quoteTimberSale(
-    workspace,
-    input,
-    lineItems,
-    context.session
-  );
+  const options = { workspace, db };
+  const lineItems = await calculateLines(workspaceId, input.lineItems, db);
+  const { amount, ...snapshot } = await quoteTimberSale(workspace, input, lineItems, db);
   if (amount <= 0 || amount > MAX_MONEY) fail(400, "Sale total is outside the supported range");
   const paidAmount = input.paidAmount ?? (input.paymentMode === "credit" ? 0 : amount);
   if (paidAmount > amount || (paidAmount && input.paymentMode === "credit"))
     fail(400, "Use cash or UPI for a payment no larger than the sale total");
   const creditAmount = roundMoney(amount - paidAmount);
   const first = lineItems[0];
-  const tx = new Transaction({
+  // Created up front: stock and ledger rows reference it before the sale row is inserted.
+  const tx = {
     ...input,
+    _id: randomUUID(),
     lineItems,
     workspaceId,
     createdBy: actor,
@@ -39,7 +38,7 @@ async function createTimberSale(req, workspace, input, override, context) {
     paidAmount,
     creditAmount,
     paymentMode: creditAmount ? "credit" : input.paymentMode,
-  });
+  };
   await moveLines(tx, -1, { reason: "sale", transactionId: tx._id, createdBy: actor }, context);
   if (tx.creditAmount) {
     await assertCan(workspaceId, "feature:creditLedger", options);
@@ -90,19 +89,18 @@ async function createTimberSale(req, workspace, input, override, context) {
     context
   );
   tx.invoice = { ...snapshot, issuedAt, type: snapshot.tax ? "tax_invoice" : "bill_of_supply" };
-  await tx.save({ session: context.session });
-  context.compensate(() => Transaction.deleteOne({ workspaceId, _id: tx._id }));
+  const saved = await sales.insertTransaction(db, workspaceId, tx);
   await enqueue(
     {
       workspaceId,
-      transactionId: tx._id,
+      transactionId: saved._id,
       channel: "whatsapp",
-      toPhone: tx.customerPhone,
-      body: buildTransactionReceipt(tx, workspace),
+      toPhone: saved.customerPhone,
+      body: buildTransactionReceipt(saved, workspace),
     },
     context
   );
-  return tx;
+  return saved;
 }
 
 async function reverseTimberSale(tx, actor, context) {

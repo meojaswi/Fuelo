@@ -1,5 +1,5 @@
 const { roundMoney } = require("../utils/money");
-const DailySummary = require("../models/dailySummary.model");
+const operations = require("../repositories/operations");
 const { istDayBoundsUTC } = require("../utils/datetime");
 const dashboardService = require("../services/dashboard.service");
 
@@ -15,11 +15,11 @@ async function getByDate(req, res) {
 
   // Keep the snapshot response shape but calculate current totals after voids
   // and sales posted in the last five minutes of a business day.
-  const saved = await DailySummary.findOne({ workspaceId: req.workspaceId, date });
+  const saved = await operations.getSummary(req.workspaceId, date);
 
   const live = await dashboardService.getDailySummary(req.workspaceId, date);
   if (saved) {
-    const prevItems = new Map(saved.items.map((item) => [item.itemType, item.toObject()]));
+    const prevItems = new Map(saved.items.map((item) => [item.itemType, item]));
     const items = live.map((row) => ({
       ...prevItems.get(row._id),
       itemType: row._id,
@@ -27,7 +27,7 @@ async function getByDate(req, res) {
       totalAmount: row.totalAmount,
     }));
     return res.json({
-      ...saved.toObject(),
+      ...saved,
       items,
       grandTotalAmount: roundMoney(items.reduce((total, item) => total + item.totalAmount, 0)),
     });

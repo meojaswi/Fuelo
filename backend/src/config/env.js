@@ -2,7 +2,7 @@ if (process.env.NODE_ENV !== "test") require("dotenv").config();
 
 const { connectionOptions } = require("./postgres");
 
-const required = ["MONGO_URI", "JWT_SECRET"];
+const required = ["JWT_SECRET"];
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -33,8 +33,6 @@ module.exports = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   port: parseInt(process.env.PORT || "8000", 10),
-
-  mongoUri: process.env.MONGO_URI,
 
   jwtSecret: process.env.JWT_SECRET,
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10),

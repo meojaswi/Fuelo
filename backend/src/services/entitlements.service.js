@@ -1,5 +1,5 @@
 const identity = require("../repositories/identity");
-const Transaction = require("../models/transaction.model");
+const sales = require("../repositories/sales");
 const { trialLimits } = require("../config/plans");
 const { istDateString, istDayBoundsUTC } = require("../utils/datetime");
 const { fail } = require("./atomic.service");
@@ -53,17 +53,13 @@ function monthBounds(now) {
   const [year, month] = istDateString(now).split("-");
   const next = new Date(Date.UTC(Number(year), Number(month), 1, 12));
   return {
-    $gte: istDayBoundsUTC(`${year}-${month}-01`).startUTC,
-    $lt: istDayBoundsUTC(istDateString(next)).startUTC,
+    from: istDayBoundsUTC(`${year}-${month}-01`).startUTC,
+    to: istDayBoundsUTC(istDateString(next)).startUTC,
   };
 }
 
-function transactionCount(workspaceId, now, session) {
-  return Transaction.countDocuments({
-    workspaceId,
-    status: { $ne: "voided" },
-    createdAt: monthBounds(now),
-  }).session(session);
+function transactionCount(workspaceId, now, db) {
+  return sales.monthlySaleCount(db ?? { query: require("../config/postgres").query }, workspaceId, monthBounds(now));
 }
 
 function memberCount(workspaceId, now, db) {
@@ -80,7 +76,7 @@ async function getEntitlements(workspaceId, options = {}) {
   const now = options.now ?? new Date();
   const workspace = await workspaceFor(workspaceId, options);
   const limits = caps(workspace);
-  const transactions = await transactionCount(workspaceId, now, options.session);
+  const transactions = await transactionCount(workspaceId, now, options.db);
   const members = await memberCount(workspaceId, now, options.db);
   return {
     ...state(workspace, now),
@@ -114,7 +110,7 @@ async function assertCan(workspaceId, action, options = {}) {
         : "Your workspace is read-only. Update billing to resume editing."
     );
   if (action === "transaction:create" && limits.monthlyTransactionCap != null) {
-    const count = await transactionCount(workspaceId, now, options.session);
+    const count = await transactionCount(workspaceId, now, options.db);
     if (count >= limits.monthlyTransactionCap)
       throw new EntitlementError("PLAN_LIMIT_TRANSACTIONS", "Monthly transaction limit reached.");
     return { nearTransactionCap: count + 1 >= Math.ceil(limits.monthlyTransactionCap * 0.8) };

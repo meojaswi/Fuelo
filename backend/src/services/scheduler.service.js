@@ -1,7 +1,8 @@
 const cron = require("node-cron");
 const { acquireDailyLock } = require("../repositories/schedulerLocks");
 const identity = require("../repositories/identity");
-const DailySummary = require("../models/dailySummary.model");
+const operations = require("../repositories/operations");
+const { withTransaction } = require("../config/postgres");
 const { deleteExpired } = require("../repositories/passwordOtps");
 const messageQueue = require("./messageQueue.service");
 const messageBuilder = require("./messageBuilder.service");
@@ -60,24 +61,22 @@ async function runEndOfDaySummary(date = istDateString()) {
 
       const grandTotalAmount = roundMoney(items.reduce((sum, i) => sum + i.totalAmount, 0));
 
-      await DailySummary.findOneAndUpdate(
-        { workspaceId: dealer.workspaceId, date },
-        {
-          workspaceId: dealer.workspaceId,
-          date,
-          items: items.map((i) => ({
-            itemType: i._id,
-            dispensed: i.totalQuantity,
-            totalAmount: i.totalAmount,
-          })),
-          grandTotalAmount,
-        },
-        { upsert: true }
+      await operations.saveSummary(
+        dealer.workspaceId,
+        date,
+        items.map((i) => ({
+          itemType: i._id,
+          dispensed: i.totalQuantity,
+          totalAmount: i.totalAmount,
+        })),
+        grandTotalAmount
       );
 
       const recipient = await identity.getOwnerContact(dealer.workspaceId);
       if (!recipient) continue;
-      await messageQueue.enqueue({
+      await withTransaction((db) =>
+        messageQueue.enqueue(
+          {
         workspaceId: dealer.workspaceId,
         channel: "whatsapp",
         toPhone: recipient.phone,
@@ -87,7 +86,10 @@ async function runEndOfDaySummary(date = istDateString()) {
           lines: items.map((i) => ({ itemType: i._id, quantity: i.totalQuantity, unit: i.unit })),
           totalAmount: grandTotalAmount,
         }),
-      });
+          },
+          { db }
+        )
+      );
     } catch (err) {
       logger.error({
         msg: "EOD summary failed for workspace",

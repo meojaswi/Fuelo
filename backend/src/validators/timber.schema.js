@@ -6,7 +6,7 @@ const { pricingUnits } = require("../utils/timber");
 const text = z.string().trim().min(1).max(160);
 const money = z.number().min(0).max(MAX_MONEY).transform(roundMoney);
 const dimension = z.number().positive().max(1000000);
-const objectId = z.string().regex(/^[a-f0-9]{24}$/i);
+const objectId = z.string().uuid();
 const reason = z.object({ reason: z.string().trim().min(3).max(500) });
 const line = z.object({
   itemType: text,

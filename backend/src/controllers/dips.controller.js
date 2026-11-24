@@ -1,11 +1,13 @@
-const Tank = require("../models/tank.model");
-const DipReading = require("../models/dipReading.model");
+const pump = require("../repositories/pump");
+const { query } = require("../config/postgres");
 const { permissionsFor } = require("../config/permissions");
 const { writePump } = require("../services/pumpWrite.service");
 const { fail } = require("../services/atomic.service");
 const { roundMoney } = require("../utils/money");
 const { istDayBoundsUTC } = require("../utils/datetime");
 const audit = require("../services/audit.service");
+
+const db = { query };
 
 function canManage(req) {
   return permissionsFor(req.user.role).includes("tanks:manage");
@@ -18,45 +20,35 @@ function checkDip(req, workspace) {
 
 async function targets(req, res) {
   checkDip(req, req.pumpWorkspace);
-  const tanks = await Tank.find({ workspaceId: req.workspaceId, isActive: true })
-    .select("name itemType capacityLitres")
-    .sort({ name: 1 });
-  res.json({ tanks });
+  res.json({ tanks: await pump.tankTargets(req.workspaceId) });
 }
 
 async function list(req, res) {
   const { workspaceId } = req;
   checkDip(req, req.pumpWorkspace);
-  const tank = await Tank.findOne({ workspaceId, _id: req.params.id });
+  const tank = await pump.getTank(db, workspaceId, req.params.id);
   if (!tank) fail(404, "Tank not found");
-  const filters = { workspaceId, tankId: tank._id };
+  const filters = {};
   if (!canManage(req)) {
     const { startUTC, endUTC } = istDayBoundsUTC();
-    Object.assign(filters, {
-      recordedBy: req.user.userId,
-      recordedAt: { $gte: startUTC, $lt: endUTC },
-    });
+    Object.assign(filters, { recordedBy: req.user.userId, from: startUTC, to: endUTC });
   }
-  const dips = await DipReading.find(filters).sort({ recordedAt: -1, _id: -1 }).limit(50);
-  res.json({ dips });
+  res.json({ dips: await pump.listDips(workspaceId, tank._id, filters) });
 }
 
 async function create(req, res) {
   const { workspaceId } = req;
-  const reading = await writePump(req, "tanks", async ({ session }, workspace) => {
+  const reading = await writePump(req, "tanks", async ({ db: tdb }, workspace) => {
     checkDip(req, workspace);
-    const tank = await Tank.findOne({ workspaceId, _id: req.params.id, isActive: true }).session(
-      session
-    );
+    const tank = await pump.getActiveTank(tdb, workspaceId, req.params.id, { lock: true });
     if (!tank) fail(404, "Tank not found");
-    return new DipReading({
+    return pump.insertDip(tdb, workspaceId, {
       ...req.body,
-      workspaceId,
       tankId: tank._id,
       recordedBy: req.user.userId,
       bookStock: tank.bookStock,
       varianceLitres: roundMoney(req.body.readingLitres - tank.bookStock),
-    }).save({ session });
+    });
   });
   await audit.record(req, {
     action: "tank.dip",

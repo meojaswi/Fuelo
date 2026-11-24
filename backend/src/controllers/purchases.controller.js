@@ -1,5 +1,6 @@
-const Purchase = require("../models/purchase.model");
-const Supplier = require("../models/supplier.model");
+const { randomUUID } = require("node:crypto");
+const timber = require("../repositories/timber");
+const { query } = require("../config/postgres");
 const { calculateLines, moveLines } = require("../services/timberStock.service");
 const { postSupplierEntry } = require("../services/supplierLedger.service");
 const { writeTimber } = require("../services/timberWrite.service");
@@ -10,24 +11,21 @@ const { enqueue } = require("../services/messageQueue.service");
 const { buildPurchaseReceived } = require("../services/messageBuilder.service");
 const audit = require("../services/audit.service");
 
-const scopeFor = (req) => ({ workspaceId: req.workspaceId, _id: req.params.id });
+const db = { query };
 
 async function list(req, res) {
   const page = Math.max(1, Math.min(10000, Number.parseInt(req.query.page, 10) || 1));
-  const filter = { workspaceId: req.workspaceId };
-  if (typeof req.query.supplierId === "string") filter.supplierId = req.query.supplierId;
-  const [purchases, total] = await Promise.all([
-    Purchase.find(filter)
-      .sort({ invoiceDate: -1, _id: -1 })
-      .skip((page - 1) * 30)
-      .limit(30),
-    Purchase.countDocuments(filter),
-  ]);
+  const supplierId = typeof req.query.supplierId === "string" ? req.query.supplierId : undefined;
+  const { purchases, total } = await timber.listPurchases(
+    req.workspaceId,
+    { supplierId },
+    { page, limit: 30 }
+  );
   res.json({ purchases, total, page, pages: Math.max(1, Math.ceil(total / 30)) });
 }
 
 async function get(req, res) {
-  const purchase = await Purchase.findOne(scopeFor(req));
+  const purchase = await timber.getPurchase(db, req.workspaceId, req.params.id);
   if (!purchase) fail(404, "Purchase not found");
   res.json(purchase);
 }
@@ -52,30 +50,27 @@ async function create(req, res) {
     fail(400, "Use a valid invoice date");
   }
   const purchase = await writeTimber(req, "purchases", async (context, workspace) => {
-    const { session, compensate } = context;
-    const supplier = await Supplier.findOne({
-      workspaceId,
-      _id: input.supplierId,
-      isActive: true,
-    }).session(session);
-    if (!supplier) fail(404, "Active supplier not found");
-    const invoice = { workspaceId, supplierId: supplier._id, invoiceNumber: input.invoiceNumber };
-    if (await Purchase.exists(invoice).session(session))
+    const { db: tdb } = context;
+    const supplier = await timber.getSupplier(tdb, workspaceId, input.supplierId, { lock: true });
+    if (!supplier?.isActive) fail(404, "Active supplier not found");
+    if (await timber.purchaseInvoiceExists(tdb, workspaceId, supplier._id, input.invoiceNumber))
       fail(409, "This supplier invoice number is already recorded");
-    const lineItems = await calculateLines(workspaceId, input.lineItems, session, true);
+    const lineItems = await calculateLines(workspaceId, input.lineItems, tdb, true);
     const total = roundMoney(
       lineItems.reduce((sum, row) => sum + row.lineAmount, 0) +
         input.charges.reduce((sum, row) => sum + row.amount, 0)
     );
     if (total > MAX_MONEY || input.paidAmount > total) fail(400, "Check the total and amount paid");
-    const entry = new Purchase({
+    // Created up front: stock and ledger rows reference it before the purchase row is inserted.
+    const entry = {
       ...input,
+      _id: randomUUID(),
       workspaceId,
       lineItems,
       total,
       supplierName: supplier.name,
       createdBy: req.user.userId,
-    });
+    };
     await moveLines(
       entry,
       1,
@@ -105,19 +100,18 @@ async function create(req, res) {
         context,
         { advance: true }
       );
-    await entry.save({ session });
-    compensate(() => Purchase.deleteOne({ workspaceId, _id: entry._id }));
+    const saved = await timber.insertPurchase(tdb, workspaceId, entry);
     if (supplier.phone)
       await enqueue(
         {
           workspaceId,
           channel: "whatsapp",
           toPhone: supplier.phone.length === 10 ? "+91" + supplier.phone : supplier.phone,
-          body: buildPurchaseReceived(workspace, entry),
+          body: buildPurchaseReceived(workspace, saved),
         },
         context
       );
-    return entry;
+    return saved;
   });
   await audit.record(req, {
     action: "purchase.create",
@@ -129,10 +123,10 @@ async function create(req, res) {
 }
 
 async function voidPurchase(req, res) {
-  const purchase = await writeTimber(req, "purchases", async (context, workspace) => {
-    const { session, compensate } = context;
-    const scope = scopeFor(req);
-    const original = await Purchase.findOne(scope).session(session);
+  const { workspaceId } = req;
+  const purchase = await writeTimber(req, "purchases", async (context) => {
+    const { db: tdb } = context;
+    const original = await timber.getPurchase(tdb, workspaceId, req.params.id, { lock: true });
     if (!original) fail(404, "Purchase not found");
     if (original.status !== "active") fail(409, "Purchase already voided");
     await moveLines(
@@ -152,25 +146,19 @@ async function voidPurchase(req, res) {
         },
         context
       );
-    const result = await Purchase.findOneAndUpdate(
-      { ...scope, status: "active" },
+    const result = await timber.updatePurchase(
+      tdb,
+      workspaceId,
+      original._id,
       {
-        $set: {
-          status: "voided",
-          voidedAt: new Date(),
-          voidedBy: req.user.userId,
-          voidedReason: req.body.reason,
-        },
+        status: "voided",
+        voidedAt: new Date(),
+        voidedBy: req.user.userId,
+        voidedReason: req.body.reason,
       },
-      { new: true, session }
+      { status: "active" }
     );
     if (!result) fail(409, "Purchase already voided");
-    compensate(() =>
-      Purchase.updateOne(scope, {
-        $set: { status: "active" },
-        $unset: { voidedAt: 1, voidedBy: 1, voidedReason: 1 },
-      })
-    );
     return result;
   });
   await audit.record(req, {
