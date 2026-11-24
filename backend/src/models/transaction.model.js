@@ -29,7 +29,8 @@ const transactionSchema = new mongoose.Schema(
     upiReference: { type: String }, // manual RRN entry, v1 approach
 
     notes: { type: String },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount" },
+    // TEMP(pg-cutover): remove when transaction is ported
+    createdBy: { type: String, ref: "UserAccount" },
     shiftId: { type: mongoose.Schema.Types.ObjectId, ref: "Shift" },
     vehicleNumber: String,
     vehicleNumberWarning: Boolean,
@@ -39,7 +40,8 @@ const transactionSchema = new mongoose.Schema(
     inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },
     voidedAt: Date,
     voidedReason: String,
-    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount" },
+    // TEMP(pg-cutover): remove when transaction is ported
+    voidedBy: { type: String, ref: "UserAccount" },
     status: { type: String, enum: ["active", "voided"], default: "active" },
   },
   { timestamps: true }

@@ -5,8 +5,6 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
-const Workspace = require("../models/workspace.model");
-
 const newPassword = z
   .string()
   .min(8)
@@ -20,7 +18,7 @@ const signupSchema = z.object({
     .min(10)
     .max(15)
     .regex(/^\+?\d+$/),
-  verticalType: z.enum(Workspace.schema.path("verticalType").enumValues),
+  verticalType: z.enum(["fuel", "timber", "construction", "kirana", "other"]),
   password: newPassword,
 });
 

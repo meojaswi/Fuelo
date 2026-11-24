@@ -1,4 +1,4 @@
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 const { getVertical } = require("../config/verticals");
 const { caps, EntitlementError } = require("../services/entitlements.service");
 const { fail } = require("../services/atomic.service");
@@ -17,7 +17,7 @@ function checkTimber(workspace, feature) {
 
 function requireTimber(feature) {
   return asyncHandler(async (req, res, next) => {
-    req.timberWorkspace = await Workspace.findOne({ workspaceId: req.workspaceId, isActive: true });
+    req.timberWorkspace = await identity.getWorkspace(req.workspaceId);
     checkTimber(req.timberWorkspace, feature);
     next();
   });

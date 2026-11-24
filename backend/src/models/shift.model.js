@@ -4,7 +4,8 @@ const { requireWorkspaceScope } = require("../middleware/workspaceScope.middlewa
 const schema = new Schema(
   {
     workspaceId: { type: String, required: true },
-    openedBy: { type: Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    // TEMP(pg-cutover): remove when shift is ported
+    openedBy: { type: String, ref: "UserAccount", required: true },
     openedAt: { type: Date, required: true, default: Date.now },
     closedAt: Date,
     status: { type: String, enum: ["open", "closed"], default: "open" },

@@ -1,8 +1,6 @@
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
-const UserAccount = require("../models/userAccount.model");
-const Membership = require("../models/membership.model");
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 
 const cache = new Map();
 const TTL = 30_000;
@@ -28,8 +26,8 @@ async function authorize(req, res, next, fresh = false) {
   const { userId, workspaceId, tokenVersion } = payload;
   if (
     typeof userId !== "string" ||
-    !/^[a-f0-9]{24}$/.test(userId) ||
-    typeof workspaceId !== "string" ||
+    !identity.isId(userId) ||
+    !identity.isId(workspaceId) ||
     !Number.isInteger(tokenVersion)
   ) {
     return res.status(401).json({ error: "Invalid session" });
@@ -41,9 +39,9 @@ async function authorize(req, res, next, fresh = false) {
     if (fresh || !entry || entry.expiresAt <= Date.now()) {
       const expiresAt = Date.now() + TTL;
       const [user, membership, workspace] = await Promise.all([
-        UserAccount.findById(userId).select("tokenVersion isActive"),
-        Membership.findOne({ workspaceId, userId, status: "active" }).select("role"),
-        Workspace.findOne({ workspaceId, isActive: true }).select("_id"),
+        identity.getAccount(userId),
+        identity.getActiveMembership(workspaceId, userId),
+        identity.getWorkspace(workspaceId),
       ]);
       entry = { userId, workspaceId, expiresAt, user, membership, workspace };
       if (cache.size >= 4096) cache.delete(cache.keys().next().value);

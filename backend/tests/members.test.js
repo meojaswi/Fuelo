@@ -5,12 +5,12 @@ const { request, phaseWorkspace, account, sale, password, UserAccount } = requir
 test("roles restrict attendant actions and transaction visibility", async () => {
   const owner = await phaseWorkspace("9000000030");
   const { workspaceId } = owner.dealer;
-  const Membership = require("../src/models/membership.model");
+  const { addMember, setMemberStatus } = require("./helpers/api");
   const { invalidateAuth } = require("../src/middleware/auth.middleware");
   const { sessionFor } = require("../src/controllers/auth.controller");
   async function staff(phone, role) {
     const account = await UserAccount.create({ phone, name: role });
-    await Membership.create({ workspaceId, userId: account._id, role });
+    await addMember(workspaceId, account._id, role);
     return sessionFor(account, workspaceId);
   }
   const attendant = await staff("9000000031", "attendant");
@@ -56,10 +56,7 @@ test("roles restrict attendant actions and transaction visibility", async () => 
     (await compare(owner, path + "/void", { method: "POST", body: { reason: "test" } })).status,
     200
   );
-  await Membership.updateOne(
-    { workspaceId, userId: attendant.account.id },
-    { $set: { status: "disabled" } }
-  );
+  await setMemberStatus(workspaceId, attendant.account.id, "disabled");
   invalidateAuth({ workspaceId, userId: attendant.account.id });
   assert.equal((await compare(attendant, "/api/transactions")).status, 401);
 });
@@ -131,9 +128,9 @@ test("members can accept a one-time invite and owner actions revoke access", asy
     409
   );
 
-  const Membership = require("../src/models/membership.model");
+  const { addMember } = require("./helpers/api");
   const manager = await UserAccount.create({ phone: "9000000036", name: "Manager" });
-  await Membership.create({ workspaceId, userId: manager._id, role: "manager" });
+  await addMember(workspaceId, manager._id, "manager");
   const managerSession = await require("../src/controllers/auth.controller").sessionFor(
     manager,
     workspaceId

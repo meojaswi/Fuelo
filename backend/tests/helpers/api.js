@@ -4,6 +4,10 @@ const http = require("node:http");
 const { after, before } = require("node:test");
 const mongoose = require("mongoose");
 const { MongoMemoryServer, MongoMemoryReplSet } = require("mongodb-memory-server");
+const { isolatedPostgres } = require("./postgres");
+
+// Identity data lives in PostgreSQL; each test file gets its own migrated schema.
+isolatedPostgres();
 
 let mongo;
 let server;
@@ -12,7 +16,8 @@ let proxy;
 let proxyUrl;
 const Dealer = require("../../src/models/dealer.model");
 const Link = require("../../src/models/link.model");
-const UserAccount = require("../../src/models/userAccount.model");
+const identity = require("../../src/repositories/identity");
+const { query } = require("../../src/config/postgres");
 const hashPassword = (...args) => require("../../src/services/auth.service").hashPassword(...args);
 
 const password = "phase-zero-password";
@@ -128,18 +133,65 @@ function login(phone, candidate = password) {
   return request("/api/auth/login", { method: "POST", body: { phone, password: candidate } });
 }
 
+// Test support for rows that the API would only create through an invitation flow.
+const UserAccount = {
+  async create({ phone, name }) {
+    const { rows } = await query(
+      'INSERT INTO user_accounts (phone, name) VALUES ($1, $2) RETURNING id AS "_id", phone, name, token_version AS "tokenVersion"',
+      [phone, name]
+    );
+    return rows[0];
+  },
+  async exists({ phone }) {
+    const { rowCount } = await query("SELECT 1 FROM user_accounts WHERE phone = $1", [phone]);
+    return rowCount ? {} : null;
+  },
+};
+
+async function addMember(workspaceId, userId, role, status = "active") {
+  await query(
+    "INSERT INTO memberships (workspace_id, user_id, role, status) VALUES ($1, $2, $3, $4)",
+    [workspaceId, userId, role, status]
+  );
+}
+
+async function setMemberStatus(workspaceId, userId, status) {
+  await query("UPDATE memberships SET status = $3 WHERE workspace_id = $1 AND user_id = $2", [
+    workspaceId,
+    userId,
+    status,
+  ]);
+}
+
+async function patchWorkspace(workspaceId, changes) {
+  return identity.patchWorkspace(workspaceId, changes);
+}
+
+async function workspaceExists(workspaceId) {
+  return Boolean(await identity.getWorkspaceAnyState(workspaceId));
+}
+
+async function memberExists(workspaceId, userId, role) {
+  const { rowCount } = await query(
+    "SELECT 1 FROM memberships WHERE workspace_id = $1 AND user_id = $2 AND role = $3",
+    [workspaceId, userId, role]
+  );
+  return rowCount > 0;
+}
+
 async function inviteUser(owner, phone, role) {
   const user = await UserAccount.create({ phone, name: role });
   const workspaceId = owner.dealer.workspaceId;
-  await require("../../src/models/membership.model").create({
-    workspaceId,
-    userId: user._id,
-    role,
-  });
+  await addMember(workspaceId, user._id, role);
   return require("../../src/controllers/auth.controller").sessionFor(user, workspaceId);
 }
 
 module.exports = {
+  addMember,
+  setMemberStatus,
+  patchWorkspace,
+  workspaceExists,
+  memberExists,
   request,
   signup,
   login,

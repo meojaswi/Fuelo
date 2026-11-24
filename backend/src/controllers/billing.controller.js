@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const env = require("../config/env");
 const logger = require("../utils/logger");
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 const {
   SubscriptionPlan,
   WorkspaceSubscription,
@@ -46,7 +46,7 @@ function checkout(subscriptionId) {
 }
 
 async function status(req, res) {
-  const workspace = await Workspace.findOne({ workspaceId: req.workspaceId, isActive: true });
+  const workspace = await identity.getWorkspace(req.workspaceId);
   if (!workspace) fail(404, "Workspace not found");
   const details = await getEntitlements(req.workspaceId, { workspace });
   const link = await currentLink(workspace);
@@ -71,18 +71,12 @@ async function createSubscription(req, res) {
     fail(503, "Razorpay checkout is not configured");
 
   const attempt = crypto.randomUUID();
-  const since = new Date(Date.now() - 120_000);
-  const workspace = await Workspace.findOneAndUpdate(
-    {
-      workspaceId,
-      isActive: true,
-      $or: [{ checkoutAttempt: null }, { checkoutStartedAt: { $lte: since } }],
-    },
-    { $set: { checkoutAttempt: attempt, checkoutStartedAt: new Date() } },
-    { new: true }
+  const workspace = await identity.reserveCheckout(
+    workspaceId,
+    attempt,
+    new Date(Date.now() - 120_000)
   );
   if (!workspace) fail(409, "A billing change is already in progress");
-  const reservation = { workspaceId, checkoutAttempt: attempt };
   async function prepareCheckout() {
     const active = await currentLink(workspace);
     if (active && ["active", "halted"].includes(active.status)) {
@@ -133,10 +127,12 @@ async function createSubscription(req, res) {
       razorpaySubscriptionId: remote.id,
       status: "created",
     });
-    const updated = await Workspace.updateOne(reservation, {
-      $set: { pendingSubscriptionId: remote.id },
-    });
-    if (!updated.matchedCount) {
+    const updated = await identity.patchWorkspace(
+      workspaceId,
+      { pendingSubscriptionId: remote.id },
+      { when: { checkoutAttempt: attempt } }
+    );
+    if (!updated) {
       await providerCall(() => provider.cancelSubscription(remote.id, false));
       fail(409, "The checkout window ended. Try again.");
     }
@@ -153,9 +149,7 @@ async function createSubscription(req, res) {
   try {
     result = await prepareCheckout();
   } finally {
-    await Workspace.updateOne(reservation, {
-      $unset: { checkoutAttempt: 1, checkoutStartedAt: 1 },
-    });
+    await identity.releaseCheckout(workspaceId, attempt);
   }
   res.status(result.status ?? 200).json(result.body);
 }
@@ -163,20 +157,12 @@ async function createSubscription(req, res) {
 async function cancel(req, res) {
   const { workspaceId } = req;
   const attempt = crypto.randomUUID();
-  const workspace = await Workspace.findOneAndUpdate(
-    {
-      workspaceId,
-      isActive: true,
-      $or: [
-        { checkoutAttempt: null },
-        { checkoutStartedAt: { $lte: new Date(Date.now() - 120_000) } },
-      ],
-    },
-    { $set: { checkoutAttempt: attempt, checkoutStartedAt: new Date() } },
-    { new: true }
+  const workspace = await identity.reserveCheckout(
+    workspaceId,
+    attempt,
+    new Date(Date.now() - 120_000)
   );
   if (!workspace) fail(409, "A billing change is already in progress");
-  const reservation = { workspaceId, checkoutAttempt: attempt };
   try {
     const active = await currentLink(workspace);
     if (active && ["active", "halted"].includes(active.status)) {
@@ -190,9 +176,11 @@ async function cancel(req, res) {
         provider.cancelSubscription(active.razorpaySubscriptionId, true)
       );
       const currentPeriodEnd = periodEnd(remote) || workspace.currentPeriodEnd;
-      await Workspace.updateOne(reservation, {
-        $set: { cancelAtCycleEnd: true, ...(currentPeriodEnd && { currentPeriodEnd }) },
-      });
+      await identity.patchWorkspace(
+        workspaceId,
+        { cancelAtCycleEnd: true, currentPeriodEnd: currentPeriodEnd || undefined },
+        { when: { checkoutAttempt: attempt } }
+      );
       return res.json({ ok: true, cancelAtCycleEnd: true, currentPeriodEnd });
     }
     if (!workspace.pendingSubscriptionId) fail(404, "No subscription to cancel");
@@ -201,15 +189,19 @@ async function cancel(req, res) {
       { workspaceId, razorpaySubscriptionId: workspace.pendingSubscriptionId, status: "created" },
       { $set: { status: "cancelled" } }
     );
-    await Workspace.updateOne(
-      { ...reservation, pendingSubscriptionId: workspace.pendingSubscriptionId },
-      { $unset: { pendingSubscriptionId: 1 } }
+    await identity.patchWorkspace(
+      workspaceId,
+      { pendingSubscriptionId: null },
+      {
+        when: {
+          checkoutAttempt: attempt,
+          pendingSubscriptionId: workspace.pendingSubscriptionId,
+        },
+      }
     );
     res.json({ ok: true, cancelAtCycleEnd: false });
   } finally {
-    await Workspace.updateOne(reservation, {
-      $unset: { checkoutAttempt: 1, checkoutStartedAt: 1 },
-    });
+    await identity.releaseCheckout(workspaceId, attempt);
   }
 }
 
@@ -283,25 +275,30 @@ async function handleWebhook(req, res) {
   const providerId = subscription.id;
   const eventId =
     req.get("x-razorpay-event-id") || crypto.createHash("sha256").update(req.rawBody).digest("hex");
-  const identity = { provider: "razorpay", eventId: "event:" + eventId };
+  const eventKey = { provider: "razorpay", eventId: "event:" + eventId };
   const known = await WorkspaceSubscription.findOne({
     razorpaySubscriptionId: providerId,
   }).setOptions({ skipWorkspaceGuard: true });
   if (!known) return res.json({ ok: true, ignored: true });
   const { workspaceId } = known;
   let outcome;
+  // TEMP(pg-cutover): the subscription records are still MongoDB-backed, so the workspace row is
+  // updated after that transaction commits. Fold both into one PostgreSQL transaction when the
+  // billing models are ported.
+  let workspaceChange = null;
   try {
     outcome = await atomic(workspaceId, async (context) => {
       const { session, compensate } = context;
       const workspace = await lockWorkspace(workspaceId, context);
+      workspaceChange = null;
       if (
         await WebhookEvent.exists({
           provider: "razorpay",
-          eventId: { $in: [eventId, identity.eventId] },
+          eventId: { $in: [eventId, eventKey.eventId] },
         }).session(session)
       )
         return "deduped";
-      const marker = await new WebhookEvent(identity).save({ session });
+      const marker = await new WebhookEvent(eventKey).save({ session });
       compensate(() => WebhookEvent.deleteOne({ _id: marker._id }));
       const find = { workspaceId, razorpaySubscriptionId: providerId };
       const link = await WorkspaceSubscription.findOne(find).session(session);
@@ -357,11 +354,7 @@ async function handleWebhook(req, res) {
       const clearPending =
         pending && (terminal || workspaceStatus === "active" || workspaceStatus === "past_due");
       if (pending && !current && terminal) {
-        await Workspace.updateOne(
-          { workspaceId },
-          { $unset: { pendingSubscriptionId: 1 } },
-          { session }
-        );
+        workspaceChange = { pendingSubscriptionId: null };
         return "applied";
       }
       const set = { ...(end && { currentPeriodEnd: end }) };
@@ -379,18 +372,19 @@ async function handleWebhook(req, res) {
         set.planLimits = plan.planLimits || plans.find((item) => item.name === plan.name)?.limits;
       }
       if (clearPending) unset.pendingSubscriptionId = 1;
-      const update = {
-        ...(Object.keys(set).length && { $set: set }),
-        ...(Object.keys(unset).length && { $unset: unset }),
+      workspaceChange = {
+        ...set,
+        ...Object.fromEntries(Object.keys(unset).map((key) => [key, null])),
       };
-      if (Object.keys(update).length)
-        await Workspace.updateOne({ workspaceId }, update, { session });
       return "applied";
     });
   } catch (err) {
     if (err.code === 11000) return res.json({ ok: true, deduped: true });
     throw err;
   }
+
+  if (outcome === "applied" && workspaceChange && Object.keys(workspaceChange).length)
+    await identity.patchWorkspace(workspaceId, workspaceChange);
 
   // A late charge still needs its revenue share; ordering only protects the subscription state.
   if (outcome !== "deduped" && event.event === "subscription.charged") {

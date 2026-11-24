@@ -15,9 +15,11 @@ const schema = new mongoose.Schema(
     paymentMode: { type: String, enum: ["cash", "upi"] },
     status: { type: String, enum: ["active", "voided"], default: "active" },
     notes: String,
-    createdBy: { type: mongoose.Schema.Types.ObjectId, required: true },
+    // TEMP(pg-cutover): remove when purchase is ported
+    createdBy: { type: String, required: true },
     voidedAt: Date,
-    voidedBy: mongoose.Schema.Types.ObjectId,
+    // TEMP(pg-cutover): remove when purchase is ported
+    voidedBy: String,
     voidedReason: String,
   },
   { timestamps: true }

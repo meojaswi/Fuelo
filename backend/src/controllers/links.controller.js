@@ -1,5 +1,5 @@
 const { transactionScope } = require("../utils/transactionScope");
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 const Transaction = require("../models/transaction.model");
 const linkTokenService = require("../services/linkToken.service");
 
@@ -35,7 +35,7 @@ async function resolve(req, res) {
   const { workspaceId, transactionId } = result.link;
   const [transaction, dealer] = await Promise.all([
     Transaction.findOne({ _id: transactionId, workspaceId }).select("-createdBy -voidedBy"),
-    Workspace.findOne({ workspaceId }).select("businessName"),
+    identity.isId(workspaceId) ? identity.getWorkspaceAnyState(workspaceId) : null,
   ]);
   if (!transaction || !dealer) {
     return res.status(404).json({ code: "NOT_FOUND", error: "Receipt not found" });

@@ -3,8 +3,7 @@ const Nozzle = require("../models/nozzle.model");
 const Tank = require("../models/tank.model");
 const Inventory = require("../models/inventory.model");
 const Transaction = require("../models/transaction.model");
-const Membership = require("../models/membership.model");
-const UserAccount = require("../models/userAccount.model");
+const identity = require("../repositories/identity");
 const StockMovement = require("../models/stockMovement.model");
 const { permissionsFor } = require("../config/permissions");
 const { writePump } = require("../services/pumpWrite.service");
@@ -172,17 +171,8 @@ async function applyStock(shift, effects, reopening, workspace, context) {
 
 async function alertOwner(shift, workspace, context) {
   if (Math.abs(shift.variance) <= (workspace.config?.shiftVarianceAlertRupees ?? 500)) return;
-  const owner = await Membership.findOne({
-    workspaceId: shift.workspaceId,
-    role: "owner",
-    status: "active",
-  })
-    .sort({ createdAt: 1 })
-    .session(context.session);
-  const recipient =
-    owner &&
-    (await UserAccount.findById(owner.userId).session(context.session).select("phone isActive"));
-  if (!recipient || recipient.isActive === false) return;
+  const recipient = await identity.getOwnerContact(shift.workspaceId);
+  if (!recipient) return;
   await enqueue(
     {
       workspaceId: shift.workspaceId,

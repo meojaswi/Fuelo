@@ -1,8 +1,6 @@
 const cron = require("node-cron");
 const { acquireDailyLock } = require("../repositories/schedulerLocks");
-const Workspace = require("../models/workspace.model");
-const Membership = require("../models/membership.model");
-const UserAccount = require("../models/userAccount.model");
+const identity = require("../repositories/identity");
 const DailySummary = require("../models/dailySummary.model");
 const { deleteExpired } = require("../repositories/passwordOtps");
 const messageQueue = require("./messageQueue.service");
@@ -53,7 +51,7 @@ function startScheduler() {
  * its own try/catch so one bad record can't take down the whole nightly run.
  */
 async function runEndOfDaySummary(date = istDateString()) {
-  const dealers = await Workspace.find({ isActive: true }).setOptions({ skipWorkspaceGuard: true });
+  const dealers = await identity.listActiveWorkspaces();
 
   for (const dealer of dealers) {
     try {
@@ -77,14 +75,8 @@ async function runEndOfDaySummary(date = istDateString()) {
         { upsert: true }
       );
 
-      const owner = await Membership.findOne({
-        workspaceId: dealer.workspaceId,
-        role: "owner",
-        status: "active",
-      }).sort({ createdAt: 1 });
-      const recipient =
-        owner && (await UserAccount.findById(owner.userId).select("phone isActive"));
-      if (!recipient || recipient.isActive === false) continue;
+      const recipient = await identity.getOwnerContact(dealer.workspaceId);
+      if (!recipient) continue;
       await messageQueue.enqueue({
         workspaceId: dealer.workspaceId,
         channel: "whatsapp",

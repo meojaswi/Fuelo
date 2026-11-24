@@ -1,6 +1,37 @@
 const assert = require("node:assert/strict");
+const { randomUUID } = require("node:crypto");
 const { test } = require("node:test");
 const { request, signup, phaseWorkspace, account, sale } = require("./helpers/api");
+
+test("attendant daily totals isolate sales attributed to UUID and legacy account IDs", async () => {
+  const Transaction = require("../src/models/transaction.model");
+  const { Types } = require("mongoose");
+  const { getDailySummary } = require("../src/services/dashboard.service");
+  const station = await phaseWorkspace("9000000063");
+  const { workspaceId } = station.dealer;
+  const actor = randomUUID();
+  const legacyActor = new Types.ObjectId();
+  const createdAt = new Date("2026-11-23T09:00:00Z");
+  await Transaction.create([
+    { ...sale, workspaceId, createdBy: actor, createdAt, amount: 100 },
+    { ...sale, workspaceId, createdBy: randomUUID(), createdAt, amount: 200 },
+  ]);
+  await Transaction.collection.insertOne({
+    ...sale,
+    workspaceId,
+    createdBy: legacyActor,
+    createdAt,
+    status: "active",
+    amount: 300,
+  });
+
+  const [uuidTotal] = await getDailySummary(workspaceId, createdAt, actor);
+  assert.equal(uuidTotal.count, 1);
+  assert.equal(uuidTotal.totalAmount, 100);
+  const [legacyTotal] = await getDailySummary(workspaceId, createdAt, legacyActor.toString());
+  assert.equal(legacyTotal.count, 1);
+  assert.equal(legacyTotal.totalAmount, 300);
+});
 
 test("IST summaries include 00:30 and 23:50 on the same business date", async () => {
   const Transaction = require("../src/models/transaction.model");

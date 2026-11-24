@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const logger = require("../utils/logger");
+const { getPool } = require("../config/postgres");
 
 const pending = new Map();
 
@@ -35,7 +36,37 @@ async function standalone(workspaceId, work) {
   }
 }
 
-async function atomic(workspaceId, work) {
+// TEMP(pg-cutover): MongoDB transactions no longer serialize writers through the workspace
+// document, so hold a PostgreSQL advisory lock per workspace for the duration of the write.
+// The lock is taken with try-lock polling so waiting writers never hold a pooled connection.
+async function withWorkspaceLock(workspaceId, work) {
+  let client;
+  for (;;) {
+    client = await getPool().connect();
+    const { rows } = await client.query("SELECT pg_try_advisory_lock(hashtext($1)) AS locked", [
+      "write:" + workspaceId,
+    ]);
+    if (rows[0].locked) break;
+    client.release();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  try {
+    return await work();
+  } finally {
+    try {
+      await client.query("SELECT pg_advisory_unlock(hashtext($1))", ["write:" + workspaceId]);
+      client.release();
+    } catch (error) {
+      client.release(error);
+    }
+  }
+}
+
+function atomic(workspaceId, work) {
+  return withWorkspaceLock(workspaceId, () => runAtomic(workspaceId, work));
+}
+
+async function runAtomic(workspaceId, work) {
   const session = await mongoose.startSession();
   try {
     for (let attempt = 0; ; attempt++) {

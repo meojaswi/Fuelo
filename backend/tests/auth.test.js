@@ -12,10 +12,8 @@ const {
 } = require("./helpers/api");
 const { createHmac } = require("node:crypto");
 const { query } = require("../src/config/postgres");
-const { isolatedPostgres } = require("./helpers/postgres");
 const mongoAuthContract = require("./contract/auth.json");
 
-isolatedPostgres();
 
 function assertContract(method, route, response) {
   const { data, status } = response;
@@ -43,17 +41,10 @@ test("signup creates a session and rejects concurrent duplicate phones", async (
   const created = results.find(({ status }) => status === 201);
   const conflict = results.find(({ status }) => status === 409);
   assert.ok(created?.data.token);
-  const Workspace = require("../src/models/workspace.model");
-  const Membership = require("../src/models/membership.model");
+  const { workspaceExists, memberExists } = require("./helpers/api");
   assert.ok(await UserAccount.exists({ phone: payload.phone }));
-  assert.ok(await Workspace.exists({ workspaceId: created.data.dealer.workspaceId }));
-  assert.ok(
-    await Membership.exists({
-      workspaceId: created.data.dealer.workspaceId,
-      userId: created.data.account.id,
-      role: "owner",
-    })
-  );
+  assert.ok(await workspaceExists(created.data.dealer.workspaceId));
+  assert.ok(await memberExists(created.data.dealer.workspaceId, created.data.account.id, "owner"));
   assert.match(conflict?.data.error, /already exists/);
   assert.deepEqual(created.data.dealer.config.itemTypes, ["Teak", "Sal", "Pine"]);
   assert.deepEqual(created.data.workspaces, [created.data.dealer]);
@@ -63,37 +54,23 @@ test("signup creates a session and rejects concurrent duplicate phones", async (
   assert.deepEqual(login.data.dealer, created.data.dealer);
 });
 
-test("login checks the matching legacy password and picks the oldest workspace", async () => {
+test("login checks the password and lists the account's workspaces oldest first", async () => {
   const phone = "9000000002";
-  const olderHash = await hashPassword("old-test-password");
-  const newerHash = await hashPassword(password);
-  await Dealer.create([
-    {
-      ...account(phone),
-      workspaceId: "ws_older",
-      passwordHash: olderHash,
-      createdAt: new Date("2020-01-01"),
-    },
-    {
-      ...account(phone),
-      workspaceId: "ws_newer",
-      passwordHash: newerHash,
-      createdAt: new Date("2021-01-01"),
-    },
+  const first = await signup(account(phone));
+  assert.equal(first.status, 201);
+  const { query } = require("../src/config/postgres");
+  const { rows } = await query(
+    "INSERT INTO workspaces (business_name, vertical_type, plan_limits, created_at) VALUES ('Newer', 'fuel', '{}', now() + interval '1 day') RETURNING id"
+  );
+  await query("INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, 'owner')", [
+    rows[0].id,
+    first.data.account.id,
   ]);
-
-  const { migrate } = require("../scripts/migrateToMemberships");
-  assert.equal((await migrate({ dryRun: true })).workspaces, 2);
-  assert.equal((await migrate()).memberships, 2);
-  assert.equal((await migrate()).memberships, 0);
   const login = (candidate) =>
-    request("/api/auth/login", {
-      method: "POST",
-      body: { phone, password: candidate },
-    });
+    request("/api/auth/login", { method: "POST", body: { phone, password: candidate } });
   const success = await login(password);
   assert.equal(success.status, 200);
-  assert.equal(success.data.dealer.workspaceId, "ws_older");
+  assert.equal(success.data.dealer.workspaceId, first.data.dealer.workspaceId);
   assert.equal(success.data.workspaces.length, 2);
   assert.equal((await login("incorrect-password")).status, 401);
 });
@@ -251,4 +228,22 @@ test("a trusted proxy separates clients and successful logins leave the login bu
   }
   assert.equal((await staffSignup()).status, 429);
   assert.equal((await login(otherIp)).status, 200);
+});
+
+test("PATCH /dealer merges settings into the workspace config and persists them", async () => {
+  const { token, dealer } = await phaseWorkspace("9000000095");
+  const patched = await request("/api/dealer", {
+    token,
+    method: "PATCH",
+    body: { businessName: "Renamed Station", language: "en", pumpVariancePercent: 1.25 },
+  });
+  assert.equal(patched.status, 200);
+  assert.equal(patched.data.businessName, "Renamed Station");
+  assert.equal(patched.data.language, "en");
+  assert.equal(patched.data.config.pumpVariancePercent, 1.25);
+  assert.deepEqual(patched.data.config.itemTypes, dealer.config.itemTypes);
+  const session = await request("/api/auth/session", { token });
+  assert.equal(session.data.dealer.businessName, "Renamed Station");
+  assert.equal(session.data.dealer.config.pumpVariancePercent, 1.25);
+  assert.equal((await request("/api/dealer", { token, method: "PATCH", body: {} })).status, 400);
 });

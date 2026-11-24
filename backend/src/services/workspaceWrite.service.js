@@ -1,14 +1,15 @@
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
+const { query } = require("../config/postgres");
 const { fail } = require("./atomic.service");
 
-// Touch one workspace document inside the transaction to serialize count-based
-// limits and owner invariants across API instances on a MongoDB replica set.
-async function lockWorkspace(workspaceId, { session }) {
-  const workspace = await Workspace.findOneAndUpdate(
-    { workspaceId, isActive: true },
-    { $inc: { writeVersion: 1 } },
-    { new: true, session, timestamps: false }
-  );
+// Locks the workspace row inside the caller's PostgreSQL transaction so count-based limits and
+// owner rules serialize across API instances. TEMP(pg-cutover): callers that still run inside a
+// MongoDB `atomic` context have no PostgreSQL client, so they only check the workspace exists.
+async function lockWorkspace(workspaceId, context = {}) {
+  const db = context.db ?? { query };
+  const workspace = context.db
+    ? await identity.lockWorkspace(workspaceId, db)
+    : await identity.getWorkspace(workspaceId);
   if (!workspace) fail(404, "Workspace not found");
   return workspace;
 }

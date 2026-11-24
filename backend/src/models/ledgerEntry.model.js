@@ -17,7 +17,8 @@ const schema = new mongoose.Schema(
     paymentMode: { type: String, enum: ["cash", "upi", "credit"] },
     upiReference: String,
     note: String,
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    // TEMP(pg-cutover): remove when ledgerEntry is ported
+    createdBy: { type: String, ref: "UserAccount", required: true },
     affectsBalance: { type: Boolean, default: true },
     balanceAfter: { type: Number, required: true },
   },

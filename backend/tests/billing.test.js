@@ -9,8 +9,7 @@ test("trial usage, concurrent cap, seat limits and expired read-only access", as
     dealer: { workspaceId },
   } = owner;
   assert.equal(owner.dealer.billing.trialDaysLeft, 14);
-  const Workspace = require("../src/models/workspace.model");
-  const Membership = require("../src/models/membership.model");
+  const { addMember, patchWorkspace } = require("./helpers/api");
   const Transaction = require("../src/models/transaction.model");
   const { istDateString } = require("../src/utils/datetime");
   const initial = await request("/api/billing/status", { token });
@@ -50,7 +49,7 @@ test("trial usage, concurrent cap, seat limits and expired read-only access", as
   assert.equal(await UserAccount.exists({ phone: "9000000043" }), null);
 
   const manager = await UserAccount.create({ phone: "9000000044", name: "Manager" });
-  await Membership.create({ workspaceId, userId: manager._id, role: "manager" });
+  await addMember(workspaceId, manager._id, "manager");
   const managerSession = await require("../src/controllers/auth.controller").sessionFor(
     manager,
     workspaceId
@@ -66,7 +65,10 @@ test("trial usage, concurrent cap, seat limits and expired read-only access", as
     );
   }
 
-  await Workspace.updateOne({ workspaceId }, { $set: { trialEndsAt: new Date(0) } });
+  await require("../src/config/postgres").query(
+    "UPDATE workspaces SET trial_ends_at = $2 WHERE id = $1",
+    [workspaceId, new Date(0)]
+  );
   const expired = await sell();
   assert.equal(expired.status, 402);
   assert.deepEqual(

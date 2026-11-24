@@ -17,7 +17,8 @@ const schema = new mongoose.Schema(
     effectiveAt: Date,
     paymentMode: { type: String, enum: ["cash", "upi"] },
     note: String,
-    createdBy: { type: mongoose.Schema.Types.ObjectId, required: true },
+    // TEMP(pg-cutover): remove when supplierLedgerEntry is ported
+    createdBy: { type: String, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { request, phaseWorkspace, inviteUser, sale } = require("./helpers/api");
 
-const Workspace = require("../src/models/workspace.model");
+const { patchWorkspace } = require("./helpers/api");
 const { istDateString, istDayBoundsUTC } = require("../src/utils/datetime");
 
 function api(user) {
@@ -91,15 +91,9 @@ test("tank and inventory stock agree after delivery, sale, void and adjustment",
   assert.equal((await attendant("/tanks")).status, 403);
   assert.equal((await attendant("/deliveries")).status, 403);
   const { plans } = require("../src/config/plans");
-  await Workspace.updateOne(
-    { workspaceId: owner.dealer.workspaceId },
-    { $set: { planLimits: plans[0].limits } }
-  );
+  await patchWorkspace(owner.dealer.workspaceId, { planLimits: plans[0].limits });
   assert.equal((await serve("/tanks")).data.code, "FEATURE_NOT_IN_PLAN");
-  await Workspace.updateOne(
-    { workspaceId: owner.dealer.workspaceId },
-    { $set: { planLimits: plans[1].limits } }
-  );
+  await patchWorkspace(owner.dealer.workspaceId, { planLimits: plans[1].limits });
   assert.equal((await serve("/tanks")).status, 200);
 });
 

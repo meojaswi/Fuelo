@@ -1,4 +1,4 @@
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 const Inventory = require("../models/inventory.model");
 const { writeTimber } = require("../services/timberWrite.service");
 const { states, gstinState } = require("../utils/gst");
@@ -18,18 +18,14 @@ function get(req, res) {
 async function save(req, res) {
   const { pricesIncludeTax, allowAdvances, ...fields } = req.body;
   const profile = { ...fields, state: gstinState(fields.gstin) };
-  const workspace = await writeTimber(req, "gst", ({ session }) =>
-    Workspace.findOneAndUpdate(
-      { workspaceId: req.workspaceId },
-      {
-        $set: {
-          taxProfile: profile,
-          "config.pricesIncludeTax": pricesIncludeTax,
-          ...(allowAdvances !== undefined && { "config.allowAdvances": allowAdvances }),
-        },
+  const workspace = await writeTimber(req, "gst", () =>
+    identity.patchWorkspace(req.workspaceId, {
+      taxProfile: profile,
+      config: {
+        pricesIncludeTax,
+        ...(allowAdvances !== undefined && { allowAdvances }),
       },
-      { session, new: true }
-    )
+    })
   );
   await audit.record(req, {
     action: "tax.profile.update",

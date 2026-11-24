@@ -1,4 +1,4 @@
-const Workspace = require("../models/workspace.model");
+const identity = require("../repositories/identity");
 const { getVertical } = require("../config/verticals");
 const { caps, assertCan, EntitlementError } = require("../services/entitlements.service");
 const { fail } = require("../services/atomic.service");
@@ -18,7 +18,7 @@ function checkPump(workspace, feature) {
 
 function requirePump(feature, write = false) {
   return asyncHandler(async (req, res, next) => {
-    const workspace = await Workspace.findOne({ workspaceId: req.workspaceId, isActive: true });
+    const workspace = await identity.getWorkspace(req.workspaceId);
     checkPump(workspace, feature);
     if (write) await assertCan(req.workspaceId, "write", { workspace });
     req.pumpWorkspace = workspace;

@@ -35,7 +35,8 @@ const schema = new mongoose.Schema(
         balanceAfter: Number,
       },
     ],
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    // TEMP(pg-cutover): remove when stockMovement is ported
+    createdBy: { type: String, ref: "UserAccount", required: true },
     balanceAfter: { type: Number, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

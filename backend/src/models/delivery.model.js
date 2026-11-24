@@ -13,10 +13,12 @@ const schema = new Schema(
     ratePerLitre: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
     receivedAt: { type: Date, required: true, default: Date.now },
-    receivedBy: { type: Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    // TEMP(pg-cutover): remove when delivery is ported
+    receivedBy: { type: String, ref: "UserAccount", required: true },
     status: { type: String, enum: ["active", "voided"], default: "active" },
     voidedAt: Date,
-    voidedBy: { type: Schema.Types.ObjectId, ref: "UserAccount" },
+    // TEMP(pg-cutover): remove when delivery is ported
+    voidedBy: { type: String, ref: "UserAccount" },
     voidedReason: String,
   },
   { timestamps: true }

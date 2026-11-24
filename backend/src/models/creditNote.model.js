@@ -9,7 +9,8 @@ const schema = new mongoose.Schema(
     number: { type: String, required: true },
     issuedAt: { type: Date, required: true },
     reason: { type: String, required: true },
-    issuedBy: { type: mongoose.Schema.Types.ObjectId, required: true },
+    // TEMP(pg-cutover): remove when creditNote is ported
+    issuedBy: { type: String, required: true },
   },
   { timestamps: true }
 );

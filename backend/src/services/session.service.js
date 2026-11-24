@@ -1,8 +1,8 @@
 const { createHash, randomBytes, randomUUID } = require("node:crypto");
-const Token = require("../models/refreshToken.model");
-const UserAccount = require("../models/userAccount.model");
-const Membership = require("../models/membership.model");
-const { atomic, fail } = require("./atomic.service");
+const tokens = require("../repositories/refreshTokens");
+const identity = require("../repositories/identity");
+const { withTransaction } = require("../config/postgres");
+const { fail } = require("./atomic.service");
 
 function digest(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -12,52 +12,37 @@ function validToken(value) {
   return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
 
-async function issue(
-  user,
-  workspaceId,
-  userAgent,
-  { session = null, familyId = randomUUID() } = {}
-) {
+async function issue(user, workspaceId, userAgent, { db, familyId = randomUUID() } = {}) {
   const raw = randomBytes(32).toString("hex");
-  const row = await new Token({
-    userId: user._id,
+  const row = await tokens.insert(
     workspaceId,
-    tokenVersion: user.tokenVersion,
-    familyId,
-    tokenHash: digest(raw),
-    userAgent: userAgent?.slice(0, 300),
-    expiresAt: new Date(Date.now() + 30 * 86400000),
-  }).save({ session });
+    {
+      userId: user._id,
+      tokenVersion: user.tokenVersion,
+      familyId,
+      tokenHash: digest(raw),
+      userAgent: userAgent?.slice(0, 300),
+      expiresAt: new Date(Date.now() + 30 * 86400000),
+    },
+    db
+  );
   return { raw, row };
 }
 
 async function rotate(raw, userAgent) {
   if (!validToken(raw)) fail(401, "Invalid refresh token");
-  const tokenHash = digest(raw);
-  const known = await Token.findOne({ tokenHash });
-  if (!known || known.expiresAt <= new Date()) fail(401, "Invalid refresh token");
+  const known = await tokens.findUnexpiredByHash(digest(raw));
+  if (!known) fail(401, "Invalid refresh token");
 
-  const outcome = await atomic(known.workspaceId, async ({ session, compensate }) => {
-    const match = { _id: known._id, revokedAt: null, expiresAt: { $gt: new Date() } };
-    const current = await Token.findOneAndUpdate(
-      match,
-      { $set: { revokedAt: new Date() } },
-      { new: true, session }
-    );
+  const outcome = await withTransaction(async (db) => {
+    const current = await tokens.claimForRotation(known.workspaceId, known._id, db);
     if (!current) {
-      await Token.updateMany(
-        { userId: known.userId, familyId: known.familyId, revokedAt: null },
-        { $set: { revokedAt: new Date() } },
-        { session }
-      );
+      // A reused token means the family may be stolen, so revoke all of it.
+      await tokens.revokeFamily(known.userId, known.familyId, db);
       return null;
     }
-    const user = await UserAccount.findById(current.userId).session(session);
-    const membership = await Membership.exists({
-      workspaceId: current.workspaceId,
-      userId: current.userId,
-      status: "active",
-    }).session(session);
+    const user = await identity.getAccount(current.userId, db);
+    const membership = await identity.getActiveMembership(current.workspaceId, current.userId, db);
     if (
       !user ||
       user.isActive === false ||
@@ -65,19 +50,11 @@ async function rotate(raw, userAgent) {
       !membership
     )
       return null;
-    compensate(() =>
-      Token.updateOne({ _id: current._id, replacedBy: null }, { $unset: { revokedAt: 1 } })
-    );
     const replacement = await issue(user, current.workspaceId, userAgent, {
-      session,
+      db,
       familyId: current.familyId,
     });
-    compensate(() => Token.deleteOne({ _id: replacement.row._id }));
-    await Token.updateOne(
-      { _id: current._id },
-      { $set: { replacedBy: replacement.row._id } },
-      { session }
-    );
+    await tokens.setReplacement(current.workspaceId, current._id, replacement.row._id, db);
     return { user, workspaceId: current.workspaceId, refreshToken: replacement.raw };
   });
   if (!outcome) fail(401, "Invalid refresh token");
@@ -86,36 +63,17 @@ async function rotate(raw, userAgent) {
 
 async function revoke(raw) {
   if (!validToken(raw)) return;
-  const known = await Token.findOne({ tokenHash: digest(raw) });
-  if (!known) return;
-  await atomic(known.workspaceId, ({ session }) =>
-    Token.updateMany(
-      {
-        userId: known.userId,
-        familyId: known.familyId,
-        revokedAt: null,
-      },
-      { $set: { revokedAt: new Date() } },
-      { session }
-    )
-  );
+  const known = await tokens.findUnexpiredByHash(digest(raw));
+  if (known) await tokens.revokeFamily(known.userId, known.familyId);
 }
 
 async function switchToken(raw, user, workspaceId) {
   if (validToken(raw))
-    await Token.updateOne(
-      {
-        tokenHash: digest(raw),
-        userId: user._id,
-        tokenVersion: user.tokenVersion,
-        revokedAt: null,
-      },
-      { $set: { workspaceId } }
-    );
+    await tokens.switchWorkspace(workspaceId, digest(raw), user._id, user.tokenVersion);
 }
 
-async function revokeAll(userId) {
-  await Token.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+async function revokeAll(userId, db) {
+  await tokens.revokeAllForAccount(userId, db);
 }
 
 module.exports = { issue, rotate, revoke, revokeAll, switchToken, digest };

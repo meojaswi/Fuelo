@@ -423,7 +423,7 @@ test("timber reports use purchase weights and FIFO balances and exclude other wo
     assert.equal(typeof csv.data, "string");
     assert.deepEqual((await foreign(paths + kind + window)).data.rows, []);
   }
-  const Workspace = require("../src/models/workspace.model");
+  const { patchWorkspace } = require("./helpers/api");
   const { plans } = require("../src/config/plans");
   for (const endpoint of [
     "/timber/items",
@@ -432,18 +432,12 @@ test("timber reports use purchase weights and FIFO balances and exclude other wo
     "/invoices",
     paths + "stock",
   ]) {
-    await Workspace.updateOne(
-      { workspaceId: dealer.workspaceId },
-      { $set: { planLimits: plans[0].limits } }
-    );
+    await patchWorkspace(dealer.workspaceId, { planLimits: plans[0].limits });
     const starter = await api(endpoint);
     assert.equal(starter.status, 402);
     assert.equal(starter.data.code, "FEATURE_NOT_IN_PLAN");
   }
-  await Workspace.updateOne(
-    { workspaceId: dealer.workspaceId },
-    { $set: { planLimits: plans[1].limits } }
-  );
+  await patchWorkspace(dealer.workspaceId, { planLimits: plans[1].limits });
   assert.equal((await api(paths + "stock")).status, 200);
 });
 

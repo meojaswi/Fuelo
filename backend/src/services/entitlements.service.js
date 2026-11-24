@@ -1,5 +1,4 @@
-const Workspace = require("../models/workspace.model");
-const Membership = require("../models/membership.model");
+const identity = require("../repositories/identity");
 const Transaction = require("../models/transaction.model");
 const { trialLimits } = require("../config/plans");
 const { istDateString, istDayBoundsUTC } = require("../utils/datetime");
@@ -67,16 +66,12 @@ function transactionCount(workspaceId, now, session) {
   }).session(session);
 }
 
-function memberCount(workspaceId, now, session) {
-  return Membership.countDocuments({
-    workspaceId,
-    $or: [{ status: "active" }, { status: "invited", inviteExpiresAt: { $gt: now } }],
-  }).session(session);
+function memberCount(workspaceId, now, db) {
+  return identity.countSeats(workspaceId, now, db);
 }
 
-async function workspaceFor(workspaceId, { workspace, session }) {
-  const result =
-    workspace ?? (await Workspace.findOne({ workspaceId, isActive: true }).session(session));
+async function workspaceFor(workspaceId, { workspace, db }) {
+  const result = workspace ?? (await identity.getWorkspace(workspaceId, db));
   if (!result) fail(404, "Workspace not found");
   return result;
 }
@@ -86,7 +81,7 @@ async function getEntitlements(workspaceId, options = {}) {
   const workspace = await workspaceFor(workspaceId, options);
   const limits = caps(workspace);
   const transactions = await transactionCount(workspaceId, now, options.session);
-  const members = await memberCount(workspaceId, now, options.session);
+  const members = await memberCount(workspaceId, now, options.db);
   return {
     ...state(workspace, now),
     limits,
@@ -127,8 +122,7 @@ async function assertCan(workspaceId, action, options = {}) {
   if (
     action === "member:activate" &&
     limits.maxUsers != null &&
-    (await Membership.countDocuments({ workspaceId, status: "active" }).session(options.session)) >=
-      limits.maxUsers
+    (await identity.countActiveMembers(workspaceId, options.db)) >= limits.maxUsers
   ) {
     throw new EntitlementError("PLAN_LIMIT_USERS", "The workspace has reached its member limit.");
   }
@@ -136,7 +130,7 @@ async function assertCan(workspaceId, action, options = {}) {
     action === "member:add" &&
     limits.maxUsers != null &&
     !options.seatReserved &&
-    (await memberCount(workspaceId, now, options.session)) >= limits.maxUsers
+    (await memberCount(workspaceId, now, options.db)) >= limits.maxUsers
   ) {
     throw new EntitlementError("PLAN_LIMIT_USERS", "The workspace has reached its member limit.");
   }

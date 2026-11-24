@@ -4,7 +4,7 @@ const DipReading = require("../models/dipReading.model");
 const Shift = require("../models/shift.model");
 const Delivery = require("../models/delivery.model");
 const Transaction = require("../models/transaction.model");
-const UserAccount = require("../models/userAccount.model");
+const identity = require("../repositories/identity");
 const { IST_TIME_ZONE, istDayBoundsUTC } = require("../utils/datetime");
 const { roundMoney: round } = require("../utils/money");
 const { csvCells } = require("../utils/csv");
@@ -120,9 +120,7 @@ async function daily(req, res) {
       else row.adjustmentLitres += delta;
     }
   }
-  const people = await UserAccount.find({
-    _id: { $in: shifts.map((shift) => shift.openedBy) },
-  }).select("name");
+  const people = await identity.getAccountsByIds(shifts.map((shift) => shift.openedBy));
   const names = new Map(people.map(({ _id, name }) => [String(_id), name]));
   const summaries = shifts.map((shift) => {
     let litres = 0;

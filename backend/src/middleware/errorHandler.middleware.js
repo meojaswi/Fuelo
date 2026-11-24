@@ -11,6 +11,7 @@ function errorHandler(err, req, res, next) {
       name: err.name,
       code: Number.isInteger(err.code) ? err.code : undefined,
       route: req.route?.path,
+      stack: process.env.FUELO_DEBUG_STACK ? err.stack : undefined,
     });
   res.status(status).json({
     error: status === 500 ? "Internal server error" : err.message,

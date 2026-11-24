@@ -2,7 +2,7 @@ const { transactionScope } = require("../utils/transactionScope");
 const { lockWorkspace } = require("../services/workspaceWrite.service");
 const { assertCan } = require("../services/entitlements.service");
 const audit = require("../services/audit.service");
-const UserAccount = require("../models/userAccount.model");
+const identity = require("../repositories/identity");
 const Shift = require("../models/shift.model");
 const Customer = require("../models/customer.model");
 const { getVertical } = require("../config/verticals");
@@ -10,7 +10,6 @@ const { normalizeVehicle, hasUnusualFormat } = require("../utils/vehicleNumber")
 const Notification = require("../models/notification.model");
 const { istDayBoundsUTC } = require("../utils/datetime");
 const Transaction = require("../models/transaction.model");
-const Workspace = require("../models/workspace.model");
 const { atomic, fail } = require("../services/atomic.service");
 const { MAX_MONEY, roundMoney, priceForQuantity } = require("../utils/money");
 const { changeStock } = require("../services/stock.service");
@@ -235,7 +234,7 @@ async function getById(req, res) {
     workspaceId: req.workspaceId,
     transactionId: tx._id,
   }).sort({ createdAt: -1, _id: -1 });
-  const actor = tx.createdBy && (await UserAccount.findById(tx.createdBy).select("name"));
+  const [actor] = tx.createdBy ? await identity.getAccountsByIds([tx.createdBy]) : [];
   res.json({
     ...tx.toObject(),
     recordedBy: actor?.name,
@@ -248,7 +247,7 @@ async function getReceiptPdf(req, res) {
   const tx = await Transaction.findOne({ _id: req.params.id, ...transactionScope(req) });
   if (!tx) return res.status(404).json({ error: "Transaction not found" });
 
-  const dealer = await Workspace.findOne({ workspaceId: req.workspaceId }).select("businessName");
+  const dealer = await identity.getWorkspaceAnyState(req.workspaceId);
   if (!dealer) return res.status(404).json({ error: "Workspace not found" });
 
   res.setHeader("Content-Type", "application/pdf");

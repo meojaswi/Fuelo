@@ -8,12 +8,18 @@ const { istDayBoundsUTC } = require("../utils/datetime");
  */
 async function getDailySummary(workspaceId, date = new Date(), userId) {
   const { startUTC, endUTC } = istDayBoundsUTC(date);
+  // TEMP(pg-cutover): remove when transaction is ported
+  const actorIds = userId && [
+    String(userId),
+    ...(Types.ObjectId.isValid(userId) ? [new Types.ObjectId(userId)] : []),
+  ];
 
   const rows = await Transaction.aggregate([
     {
       $match: {
         workspaceId,
-        ...(userId ? { createdBy: new Types.ObjectId(userId) } : {}),
+        // TEMP(pg-cutover): remove when transaction is ported
+        ...(actorIds ? { createdBy: { $in: actorIds } } : {}),
         status: "active",
         createdAt: { $gte: startUTC, $lt: endUTC },
       },

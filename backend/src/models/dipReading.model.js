@@ -9,7 +9,8 @@ const schema = new Schema(
     bookStock: { type: Number, required: true },
     varianceLitres: { type: Number, required: true },
     recordedAt: { type: Date, default: Date.now },
-    recordedBy: { type: Schema.Types.ObjectId, ref: "UserAccount", required: true },
+    // TEMP(pg-cutover): remove when dipReading is ported
+    recordedBy: { type: String, ref: "UserAccount", required: true },
     note: String,
   },
   { timestamps: true }

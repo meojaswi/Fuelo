@@ -1,7 +1,7 @@
 const audit = require("../services/audit.service");
 const { createHmac, randomInt } = require("node:crypto");
 const Otp = require("../repositories/passwordOtps");
-const UserAccount = require("../models/userAccount.model");
+const identity = require("../repositories/identity");
 const { activeWorkspaces, changeCredentials } = require("./auth.controller");
 const { hashPassword } = require("../services/auth.service");
 const { enqueue } = require("../services/messageQueue.service");
@@ -28,9 +28,7 @@ async function request(req, res) {
       cooldownBefore: new Date(+now - 60_000),
     });
     if (issued) {
-      const user = await UserAccount.findOne({ phone, isActive: { $ne: false } }).select(
-        "+passwordHash"
-      );
+      const user = await identity.getActiveCredentials(phone);
       if (user?.passwordHash) {
         const [membership] = await activeWorkspaces(user._id);
         if (membership)
@@ -59,9 +57,7 @@ async function verify(req, res) {
   if (!challenge) fail(400, "Invalid or expired code");
   const claimed = await Otp.claim(challenge, hash(phoneHash + ":" + code), new Date());
   if (!claimed) fail(400, "Invalid or expired code");
-  const user = await UserAccount.findOne({ phone, isActive: { $ne: false } }).select(
-    "+passwordHash"
-  );
+  const user = await identity.getActiveCredentials(phone);
   if (!user?.passwordHash) fail(400, "Invalid or expired code");
   await changeCredentials(user._id, await hashPassword(password));
   const [known] = await activeWorkspaces(user._id).catch(() => []);
