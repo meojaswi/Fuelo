@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { timberGet, timberSend, timberError, downloadTimber } from "../api/timber.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { formatCurrency, formatQuantity } from "../utils/formatters";
 import { ErrorNotice } from "../components/timber/TimberForms";
 import Button from "../components/shared/Button";

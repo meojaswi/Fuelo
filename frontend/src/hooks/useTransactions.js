@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createTransaction, getTransaction, listTransactions } from "../api/transactions.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./useAuth";
 
 export function useTransactions(params = {}) {
   const { user } = useAuth();

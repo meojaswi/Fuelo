@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { billingEvent } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import Modal from "../shared/Modal";
 
 export default function WorkspaceBillingNotice() {

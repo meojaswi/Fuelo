@@ -5,7 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SharedReceiptPage from "./pages/SharedReceiptPage";
 import LegalPage from "./pages/LegalPage";
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 function Protected({ children }) {

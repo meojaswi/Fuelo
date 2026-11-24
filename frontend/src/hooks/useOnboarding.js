@@ -4,7 +4,7 @@ import { listMembers } from "../api/members.api";
 import { getPump } from "../api/pump.api";
 import { timberGet } from "../api/timber.api";
 import { listTransactions } from "../api/transactions.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./useAuth";
 
 // Each step: where to go, who can do it, and how to tell it is done from real data.
 const STEPS = [

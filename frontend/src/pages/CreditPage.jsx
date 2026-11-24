@@ -15,7 +15,7 @@ import Input from "../components/shared/Input";
 import Modal from "../components/shared/Modal";
 import Pagination from "../components/shared/Pagination";
 import Textarea from "../components/shared/Textarea";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
 const dateOptions = { dateStyle: "medium", timeZone: "Asia/Kolkata" };

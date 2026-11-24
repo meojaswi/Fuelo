@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { timberGet, timberSend, timberError } from "../../api/timber.api";
 import { autocompleteCustomers } from "../../api/customers.api";
 import { createTransaction } from "../../api/transactions.api";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { formatCurrency } from "../../utils/formatters";
 import Button from "../shared/Button";
 import Input from "../shared/Input";

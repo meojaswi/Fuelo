@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getDailySummary } from "../api/dashboard.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./useAuth";
 
 export function useDailySummary() {
   const { user } = useAuth();

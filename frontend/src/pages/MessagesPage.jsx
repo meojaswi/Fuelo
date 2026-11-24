@@ -5,7 +5,7 @@ import Pagination from "../components/shared/Pagination";
 import EmptyState from "../components/shared/EmptyState";
 import Button from "../components/shared/Button";
 import { formatDate } from "../utils/formatters";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 export default function MessagesPage() {
   const { user } = useAuth();

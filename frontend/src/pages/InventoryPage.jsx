@@ -9,7 +9,7 @@ import {
 import Button from "../components/shared/Button";
 import Modal from "../components/shared/Modal";
 import SkeletonCard from "../components/shared/SkeletonCard";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { formatCurrency, formatDate as formatDateTime, formatQuantity } from "../utils/formatters";
 
 export default function InventoryPage() {

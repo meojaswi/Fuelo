@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, Trash2, Building, Check, AlertCircle } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import {
   switchWorkspaceRequest,
   createWorkspaceRequest,

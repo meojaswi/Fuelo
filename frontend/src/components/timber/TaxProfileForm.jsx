@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Button from "../shared/Button";
 import Input from "../shared/Input";
 import { ErrorNotice } from "./TimberForms";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { timberGet, timberSend, timberError } from "../../api/timber.api";
 
 export default function TaxProfileForm() {

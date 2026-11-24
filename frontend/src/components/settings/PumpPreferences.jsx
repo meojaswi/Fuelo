@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { updateDealerRequest } from "../../api/dealer.api";
 import Button from "../shared/Button";
 import Input from "../shared/Input";

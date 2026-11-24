@@ -17,7 +17,7 @@ import {
   Clock3,
   Droplets,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import WorkspaceBillingNotice from "../components/billing/WorkspaceBillingNotice";
 import TopBar from "./TopBar";
 import BottomNav from "./BottomNav";

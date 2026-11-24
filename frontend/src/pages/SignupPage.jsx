@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import PhoneInput from "../components/shared/PhoneInput";
 import Input from "../components/shared/Input";
 import Button from "../components/shared/Button";

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import client, {
   clearSession,
   persistSession,
@@ -7,7 +7,7 @@ import client, {
 } from "../api/client";
 import { loginRequest, logoutRequest, signupRequest } from "../api/auth.api";
 
-const C = createContext(null);
+import { AuthContext as C } from "./authContextObject";
 
 function readSessionValue(key, fallback) {
   try {
@@ -121,6 +121,3 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
-  return useContext(C);
-}

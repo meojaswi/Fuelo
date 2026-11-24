@@ -3,7 +3,7 @@ import client from "../api/client";
 import Button from "../components/shared/Button";
 import Input from "../components/shared/Input";
 import Pagination from "../components/shared/Pagination";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { formatDate } from "../utils/formatters";
 
 export default function ActivityPage() {

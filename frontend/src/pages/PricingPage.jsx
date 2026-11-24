@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { choosePlan } from "../api/billing.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { Link } from "react-router-dom";
 import MotionWord from "../components/shared/MotionWord";
 import HighlightPill from "../components/shared/HighlightPill";

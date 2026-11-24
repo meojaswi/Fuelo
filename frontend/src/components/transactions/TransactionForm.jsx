@@ -10,7 +10,7 @@ import MessagePreviewModal from "./MessagePreviewModal";
 import Button from "../shared/Button";
 import PhoneInput from "../shared/PhoneInput";
 import Input from "../shared/Input";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { fetchPrices } from "../../api/inventory.api";
 import { formatCurrency } from "../../utils/formatters";
 import { createTransaction } from "../../api/transactions.api";

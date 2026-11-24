@@ -1,6 +1,6 @@
 import { Home, List, Plus, MessageSquare, Wallet } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 export default function BottomNav() {
   const { user } = useAuth();
   const links = [

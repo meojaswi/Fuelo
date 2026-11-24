@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { AlertCircle, Plus, Trash2, CheckCircle2 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { updateDealerRequest } from "../api/dealer.api";
 import { updatePasswordRequest } from "../api/auth.api";
 import { lazy } from "react";

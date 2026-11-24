@@ -1,6 +1,6 @@
 import { lazy } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import TransactionForm from "../components/transactions/TransactionForm";
 const TimberSaleForm = lazy(() => import("../components/timber/TimberSaleForm"));
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelBilling, getBilling } from "../api/billing.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import Button from "../components/shared/Button";
 import { formatDate, formatQuantity } from "../utils/formatters";
 

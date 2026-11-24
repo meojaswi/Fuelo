@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getPump, postPump } from "../api/pump.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import Button from "../components/shared/Button";
 import Input from "../components/shared/Input";
 import Modal from "../components/shared/Modal";

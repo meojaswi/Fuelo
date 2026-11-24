@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { timberGet } from "../api/timber.api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./useAuth";
 
 // Item names for filters and selectors. Same source as the sale forms:
 // timber workspaces use their configured timber items, other workspaces use

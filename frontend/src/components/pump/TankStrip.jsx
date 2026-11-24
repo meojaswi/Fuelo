@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPump } from "../../api/pump.api";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { FuelLabel, LevelBadge, TankGraphic } from "./TankGauge";
 import { levelText } from "./tankColors";
 

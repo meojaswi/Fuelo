@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { timberGet, timberSend, timberError } from "../api/timber.api";
 import { formatCurrency, formatQuantity } from "../utils/formatters";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import Input from "../components/shared/Input";
 import Button from "../components/shared/Button";
 import { Select, ErrorNotice } from "../components/timber/TimberForms";
